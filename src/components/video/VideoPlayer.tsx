@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Volume2, VolumeX, Play } from "lucide-react";
+import { Volume2, VolumeX, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VideoPlayerProps {
@@ -14,12 +14,14 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(true);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     if (isActive) {
+      setIsBuffering(true);
       video.play().catch(() => {
         setIsPlaying(false);
       });
@@ -31,6 +33,31 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
       setProgress(0);
     }
   }, [isActive]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleWaiting = () => setIsBuffering(true);
+    const handlePlaying = () => setIsBuffering(false);
+    const handleCanPlay = () => setIsBuffering(false);
+    const handleSeeking = () => setIsBuffering(true);
+    const handleSeeked = () => setIsBuffering(false);
+
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("seeking", handleSeeking);
+    video.addEventListener("seeked", handleSeeked);
+
+    return () => {
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("seeking", handleSeeking);
+      video.removeEventListener("seeked", handleSeeked);
+    };
+  }, []);
 
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
@@ -96,9 +123,16 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
         playsInline
         preload="metadata"
       />
+
+      {/* Buffering spinner */}
+      {isBuffering && isActive && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/40 pointer-events-none">
+          <Loader2 className="w-12 h-12 text-foreground animate-spin" />
+        </div>
+      )}
       
       {/* Play/Pause indicator */}
-      {!isPlaying && (
+      {!isPlaying && !isBuffering && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/20">
           <Play className="w-20 h-20 text-foreground/80 fill-foreground/80" />
         </div>
