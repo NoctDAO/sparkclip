@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Volume2, VolumeX, Play, Pause } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Volume2, VolumeX, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VideoPlayerProps {
@@ -12,6 +12,7 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [progress, setProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
 
   useEffect(() => {
@@ -20,7 +21,6 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
 
     if (isActive) {
       video.play().catch(() => {
-        // Autoplay was prevented
         setIsPlaying(false);
       });
       setIsPlaying(true);
@@ -28,8 +28,25 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
       video.pause();
       video.currentTime = 0;
       setIsPlaying(false);
+      setProgress(0);
     }
   }, [isActive]);
+
+  const handleTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.duration) return;
+    
+    const currentProgress = (video.currentTime / video.duration) * 100;
+    setProgress(currentProgress);
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    return () => video.removeEventListener("timeupdate", handleTimeUpdate);
+  }, [handleTimeUpdate]);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -51,6 +68,16 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
     
     video.muted = !isMuted;
     setIsMuted(!isMuted);
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickPosition = (e.clientX - rect.left) / rect.width;
+    video.currentTime = clickPosition * video.duration;
   };
 
   return (
@@ -81,7 +108,7 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
       <button
         onClick={toggleMute}
         className={cn(
-          "absolute bottom-4 right-4 p-2 rounded-full bg-secondary/80 transition-opacity",
+          "absolute bottom-8 right-4 p-2 rounded-full bg-secondary/80 transition-opacity z-10",
           showControls || !isPlaying ? "opacity-100" : "opacity-0"
         )}
       >
@@ -92,12 +119,24 @@ export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
         )}
       </button>
 
-      {/* Progress bar */}
-      {showControls && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-secondary">
-          <div className="h-full bg-primary" style={{ width: "0%" }} />
-        </div>
-      )}
+      {/* Progress bar - always visible */}
+      <div 
+        className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/20 cursor-pointer z-20"
+        onClick={handleProgressClick}
+      >
+        <div 
+          className="h-full bg-foreground transition-all duration-100 ease-linear"
+          style={{ width: `${progress}%` }}
+        />
+        {/* Progress dot indicator */}
+        <div 
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-foreground rounded-full transition-opacity",
+            showControls ? "opacity-100" : "opacity-0"
+          )}
+          style={{ left: `calc(${progress}% - 6px)` }}
+        />
+      </div>
     </div>
   );
 }
