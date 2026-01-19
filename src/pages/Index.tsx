@@ -1,12 +1,16 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { VideoFeed } from "@/components/video/VideoFeed";
+import { FeedTabs } from "@/components/layout/FeedTabs";
+import { BottomNav } from "@/components/layout/BottomNav";
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<"foryou" | "following">("foryou");
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="h-screen w-full bg-background overflow-hidden">
+      <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <VideoFeed feedType={activeTab} />
+      <BottomNav />
     </div>
   );
 };
