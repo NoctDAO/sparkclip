@@ -47,6 +47,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        heart: "hsl(var(--heart))",
+        share: "hsl(var(--share))",
+        comment: "hsl(var(--comment))",
+        bookmark: "hsl(var(--bookmark))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
