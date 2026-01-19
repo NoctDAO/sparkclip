@@ -10,6 +10,9 @@ import Profile from "./pages/Profile";
 import Upload from "./pages/Upload";
 import Discover from "./pages/Discover";
 import Inbox from "./pages/Inbox";
+import EditProfile from "./pages/EditProfile";
+import Settings from "./pages/Settings";
+import ChangePassword from "./pages/ChangePassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +31,9 @@ const App = () => (
             <Route path="/upload" element={<Upload />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/inbox" element={<Inbox />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/password" element={<ChangePassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
