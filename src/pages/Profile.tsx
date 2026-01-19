@@ -178,14 +178,20 @@ export default function Profile() {
 
         {/* Stats */}
         <div className="flex items-center gap-8 mt-4">
-          <div className="text-center">
+          <button
+            onClick={() => navigate(`/follow-list/${userId}?tab=following`)}
+            className="text-center hover:opacity-70 transition-opacity"
+          >
             <p className="font-bold text-lg">{formatCount(profile.following_count)}</p>
             <p className="text-xs text-muted-foreground">Following</p>
-          </div>
-          <div className="text-center">
+          </button>
+          <button
+            onClick={() => navigate(`/follow-list/${userId}?tab=followers`)}
+            className="text-center hover:opacity-70 transition-opacity"
+          >
             <p className="font-bold text-lg">{formatCount(profile.followers_count)}</p>
             <p className="text-xs text-muted-foreground">Followers</p>
-          </div>
+          </button>
           <div className="text-center">
             <p className="font-bold text-lg">{formatCount(profile.likes_count)}</p>
             <p className="text-xs text-muted-foreground">Likes</p>
