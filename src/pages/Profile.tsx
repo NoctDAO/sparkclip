@@ -157,7 +157,7 @@ export default function Profile() {
         </button>
         <h1 className="font-bold text-lg">@{profile.username || "user"}</h1>
         {isOwnProfile ? (
-          <button onClick={handleSignOut} className="p-2">
+          <button onClick={() => navigate("/settings")} className="p-2">
             <Settings className="w-6 h-6" />
           </button>
         ) : (
