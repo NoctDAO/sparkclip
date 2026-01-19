@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
-import { Heart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Heart, ChevronLeft } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoActions } from "./VideoActions";
 import { VideoInfo } from "./VideoInfo";
@@ -24,24 +25,80 @@ export function VideoCard({
   isBookmarked = false,
   isFollowing = false,
 }: VideoCardProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [liked, setLiked] = useState(isLiked);
   const [likesCount, setLikesCount] = useState(video.likes_count);
   const [showHeartAnimation, setShowHeartAnimation] = useState(false);
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+  
   const lastTapRef = useRef<number>(0);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isSwipingRef = useRef(false);
 
-  const handleDoubleTap = useCallback(async (e: React.MouseEvent | React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+    isSwipingRef.current = false;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+
+    const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+    const deltaY = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+
+    // Only track horizontal swipes (ignore vertical scrolling)
+    if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+      isSwipingRef.current = true;
+      
+      // Only allow swiping left (negative deltaX)
+      if (deltaX < 0) {
+        setSwipeOffset(deltaX);
+        setShowSwipeHint(deltaX < -50);
+      }
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaTime = Date.now() - touchStartRef.current.time;
+    
+    // Swipe left threshold: moved more than 100px or fast swipe
+    const isSwipeLeft = deltaX < -100 || (deltaX < -50 && deltaTime < 300);
+
+    if (isSwipeLeft && isSwipingRef.current) {
+      // Navigate to creator's profile
+      navigate(`/profile/${video.user_id}`);
+    } else if (!isSwipingRef.current) {
+      // Handle double tap for like
+      handleDoubleTapLogic(e);
+    }
+
+    // Reset
+    setSwipeOffset(0);
+    setShowSwipeHint(false);
+    touchStartRef.current = null;
+    isSwipingRef.current = false;
+  }, [navigate, video.user_id]);
+
+  const handleDoubleTapLogic = useCallback(async (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Double tap detected
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       let clientX: number, clientY: number;
 
-      if ('touches' in e) {
+      if ('changedTouches' in e) {
         clientX = e.changedTouches[0].clientX;
         clientY = e.changedTouches[0].clientY;
       } else {
@@ -57,7 +114,6 @@ export function VideoCard({
       setShowHeartAnimation(true);
       setTimeout(() => setShowHeartAnimation(false), 1000);
 
-      // Like the video if not already liked
       if (!liked && user) {
         const { error } = await supabase
           .from("likes")
@@ -73,21 +129,38 @@ export function VideoCard({
     lastTapRef.current = now;
   }, [liked, user, video.id]);
 
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    handleDoubleTapLogic(e);
+  }, [handleDoubleTapLogic]);
+
   const handleLikeChange = useCallback((newLiked: boolean, newCount: number) => {
     setLiked(newLiked);
     setLikesCount(newCount);
   }, []);
 
   return (
-    <div className="relative w-full h-full snap-start snap-always">
-      {/* Video Player with double-tap detection */}
+    <div className="relative w-full h-full snap-start snap-always overflow-hidden">
+      {/* Video Player with swipe and double-tap detection */}
       <div 
-        className="absolute inset-0"
-        onClick={handleDoubleTap}
-        onTouchEnd={handleDoubleTap}
+        className="absolute inset-0 transition-transform duration-200 ease-out"
+        style={{ transform: `translateX(${swipeOffset}px)` }}
+        onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <VideoPlayer src={video.video_url} isActive={isActive} />
       </div>
+
+      {/* Swipe hint indicator */}
+      {showSwipeHint && (
+        <div className="absolute right-0 top-0 bottom-0 w-20 flex items-center justify-center bg-gradient-to-l from-primary/30 to-transparent pointer-events-none z-30">
+          <div className="flex flex-col items-center gap-1 text-foreground">
+            <ChevronLeft className="w-8 h-8 animate-pulse" />
+            <span className="text-xs font-semibold">Profile</span>
+          </div>
+        </div>
+      )}
 
       {/* Double-tap heart animation */}
       {showHeartAnimation && (
