@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Search, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +25,28 @@ export default function FollowList() {
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter users based on search query
+  const filteredFollowers = useMemo(() => {
+    if (!searchQuery.trim()) return followers;
+    const query = searchQuery.toLowerCase();
+    return followers.filter(
+      (p) =>
+        p.display_name?.toLowerCase().includes(query) ||
+        p.username?.toLowerCase().includes(query)
+    );
+  }, [followers, searchQuery]);
+
+  const filteredFollowing = useMemo(() => {
+    if (!searchQuery.trim()) return following;
+    const query = searchQuery.toLowerCase();
+    return following.filter(
+      (p) =>
+        p.display_name?.toLowerCase().includes(query) ||
+        p.username?.toLowerCase().includes(query)
+    );
+  }, [following, searchQuery]);
 
   useEffect(() => {
     if (userId) {
@@ -214,6 +237,27 @@ export default function FollowList() {
         </h1>
       </header>
 
+      {/* Search Bar */}
+      <div className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search"
+            className="bg-secondary border-none h-10 pl-10 pr-10"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full bg-transparent border-b border-border rounded-none h-12">
           <TabsTrigger
@@ -233,9 +277,14 @@ export default function FollowList() {
         <TabsContent value="followers" className="mt-0">
           {followers.length === 0 ? (
             <EmptyState type="followers" />
+          ) : filteredFollowers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <p className="text-lg font-medium">No results found</p>
+              <p className="text-sm mt-1">Try a different search term</p>
+            </div>
           ) : (
             <div className="divide-y divide-border">
-              {followers.map((profile) => (
+              {filteredFollowers.map((profile) => (
                 <UserItem key={profile.user_id} profile={profile} />
               ))}
             </div>
@@ -245,9 +294,14 @@ export default function FollowList() {
         <TabsContent value="following" className="mt-0">
           {following.length === 0 ? (
             <EmptyState type="following" />
+          ) : filteredFollowing.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <p className="text-lg font-medium">No results found</p>
+              <p className="text-sm mt-1">Try a different search term</p>
+            </div>
           ) : (
             <div className="divide-y divide-border">
-              {following.map((profile) => (
+              {filteredFollowing.map((profile) => (
                 <UserItem key={profile.user_id} profile={profile} />
               ))}
             </div>
