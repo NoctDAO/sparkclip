@@ -13,6 +13,7 @@ import Inbox from "./pages/Inbox";
 import EditProfile from "./pages/EditProfile";
 import Settings from "./pages/Settings";
 import ChangePassword from "./pages/ChangePassword";
+import FollowList from "./pages/FollowList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/edit-profile" element={<EditProfile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/password" element={<ChangePassword />} />
+            <Route path="/follow-list/:userId" element={<FollowList />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
