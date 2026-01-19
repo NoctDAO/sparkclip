@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,7 @@ interface VideoActionsProps {
   isLiked?: boolean;
   isBookmarked?: boolean;
   onCommentClick: () => void;
+  onLikeChange?: (liked: boolean, count: number) => void;
 }
 
 export function VideoActions({
@@ -23,12 +24,22 @@ export function VideoActions({
   isLiked = false,
   isBookmarked = false,
   onCommentClick,
+  onLikeChange,
 }: VideoActionsProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(isBookmarked);
   const [likesCount, setLikesCount] = useState(initialLikes);
+
+  // Sync with parent state
+  useEffect(() => {
+    setLiked(isLiked);
+  }, [isLiked]);
+
+  useEffect(() => {
+    setLikesCount(initialLikes);
+  }, [initialLikes]);
 
   const handleLike = async () => {
     if (!user) {
@@ -44,8 +55,10 @@ export function VideoActions({
         .eq("video_id", videoId);
 
       if (!error) {
+        const newCount = likesCount - 1;
         setLiked(false);
-        setLikesCount((prev) => prev - 1);
+        setLikesCount(newCount);
+        onLikeChange?.(false, newCount);
       }
     } else {
       const { error } = await supabase
@@ -53,8 +66,10 @@ export function VideoActions({
         .insert({ user_id: user.id, video_id: videoId });
 
       if (!error) {
+        const newCount = likesCount + 1;
         setLiked(true);
-        setLikesCount((prev) => prev + 1);
+        setLikesCount(newCount);
+        onLikeChange?.(true, newCount);
       }
     }
   };
