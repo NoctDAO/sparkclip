@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { Send, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Comment } from "@/types/video";
-import { formatDistanceToNow } from "date-fns";
+import { CommentItem } from "@/components/comments/CommentItem";
+import { MentionInput } from "@/components/comments/MentionInput";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface CommentsSheetProps {
   videoId: string;
@@ -20,45 +20,130 @@ interface CommentsSheetProps {
 export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { createNotification } = useNotifications();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
 
-  useEffect(() => {
-    if (open) {
-      fetchComments();
-    }
-  }, [open, videoId]);
-
-  const fetchComments = async () => {
-    const { data, error } = await supabase
+  const fetchComments = useCallback(async () => {
+    // Fetch all comments for this video
+    const { data: commentsData, error } = await supabase
       .from("comments")
       .select("*")
       .eq("video_id", videoId)
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      // Fetch profiles separately
-      const userIds = [...new Set(data.map(c => c.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, username, display_name, avatar_url")
-        .in("user_id", userIds);
+    if (error || !commentsData) return;
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-      
-      const commentsWithProfiles = data.map(comment => ({
-        ...comment,
-        profiles: profileMap.get(comment.user_id) || null,
-      }));
-      
-      setComments(commentsWithProfiles as Comment[]);
+    // Fetch profiles separately
+    const userIds = [...new Set(commentsData.map((c) => c.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, username, display_name, avatar_url")
+      .in("user_id", userIds);
+
+    const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+
+    // Fetch current user's likes
+    let likedCommentIds = new Set<string>();
+    if (user) {
+      const { data: likes } = await supabase
+        .from("comment_likes")
+        .select("comment_id")
+        .eq("user_id", user.id)
+        .in(
+          "comment_id",
+          commentsData.map((c) => c.id)
+        );
+
+      likedCommentIds = new Set(likes?.map((l) => l.comment_id) || []);
+    }
+
+    // Build comment tree
+    const commentsWithProfiles = commentsData.map((comment) => ({
+      ...comment,
+      profiles: profileMap.get(comment.user_id) || null,
+      isLiked: likedCommentIds.has(comment.id),
+      replies: [] as Comment[],
+    })) as Comment[];
+
+    // Separate top-level comments and replies
+    const topLevelComments: Comment[] = [];
+    const repliesMap = new Map<string, Comment[]>();
+
+    commentsWithProfiles.forEach((comment) => {
+      if (comment.parent_id) {
+        const replies = repliesMap.get(comment.parent_id) || [];
+        replies.push(comment);
+        repliesMap.set(comment.parent_id, replies);
+      } else {
+        topLevelComments.push(comment);
+      }
+    });
+
+    // Attach replies to parent comments
+    topLevelComments.forEach((comment) => {
+      const replies = repliesMap.get(comment.id) || [];
+      // Sort replies by oldest first
+      replies.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      comment.replies = replies;
+    });
+
+    setComments(topLevelComments);
+  }, [videoId, user]);
+
+  useEffect(() => {
+    if (open) {
+      fetchComments();
+    }
+  }, [open, fetchComments]);
+
+  const handleLikeChange = (commentId: string, isLiked: boolean, newCount: number) => {
+    setComments((prev) =>
+      prev.map((comment) => {
+        if (comment.id === commentId) {
+          return { ...comment, isLiked, likes_count: newCount };
+        }
+        // Check replies
+        if (comment.replies) {
+          return {
+            ...comment,
+            replies: comment.replies.map((reply) =>
+              reply.id === commentId ? { ...reply, isLiked, likes_count: newCount } : reply
+            ),
+          };
+        }
+        return comment;
+      })
+    );
+  };
+
+  const handleReply = (comment: Comment) => {
+    setReplyingTo(comment);
+    // Pre-fill with @mention
+    const username = comment.profiles?.username;
+    if (username && !newComment.includes(`@${username}`)) {
+      setNewComment(`@${username} `);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setNewComment("");
+  };
+
+  const extractMentions = (content: string): string[] => {
+    const mentionRegex = /@(\w+)/g;
+    const mentions: string[] = [];
+    let match;
+    while ((match = mentionRegex.exec(content)) !== null) {
+      mentions.push(match[1]);
+    }
+    return mentions;
+  };
+
+  const handleSubmit = async () => {
     if (!user) {
       toast({ title: "Please sign in to comment", variant: "destructive" });
       return;
@@ -67,34 +152,76 @@ export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProp
     if (!newComment.trim()) return;
 
     setLoading(true);
-    
-    const { error } = await supabase
+
+    const { data: newCommentData, error } = await supabase
       .from("comments")
       .insert({
         user_id: user.id,
         video_id: videoId,
         content: newComment.trim(),
-      });
+        parent_id: replyingTo?.id || null,
+      })
+      .select()
+      .single();
 
-    if (!error) {
+    if (!error && newCommentData) {
+      // Create notification for reply
+      if (replyingTo && replyingTo.user_id !== user.id) {
+        await createNotification({
+          userId: replyingTo.user_id,
+          type: "reply",
+          videoId,
+          commentId: newCommentData.id,
+        });
+      }
+
+      // Create notifications for @mentions
+      const mentions = extractMentions(newComment);
+      if (mentions.length > 0) {
+        // Fetch user IDs for mentioned usernames
+        const { data: mentionedProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, username")
+          .in("username", mentions);
+
+        if (mentionedProfiles) {
+          for (const profile of mentionedProfiles) {
+            if (profile.user_id !== user.id && profile.user_id !== replyingTo?.user_id) {
+              await createNotification({
+                userId: profile.user_id,
+                type: "mention",
+                videoId,
+                commentId: newCommentData.id,
+              });
+            }
+          }
+        }
+      }
+
       setNewComment("");
+      setReplyingTo(null);
       fetchComments();
     } else {
       toast({ title: "Failed to post comment", variant: "destructive" });
     }
-    
+
     setLoading(false);
   };
 
+  const totalCount = comments.reduce(
+    (acc, c) => acc + 1 + (c.replies?.length || 0),
+    0
+  );
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="bottom" 
+      <SheetContent
+        side="bottom"
         className="h-[70vh] bg-card border-border rounded-t-3xl"
       >
         <SheetHeader className="flex flex-row items-center justify-between pb-4 border-b border-border">
           <SheetTitle className="text-foreground">
-            {comments.length} comments
+            {totalCount} {totalCount === 1 ? "comment" : "comments"}
           </SheetTitle>
           <Button
             variant="ghost"
@@ -106,7 +233,7 @@ export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProp
           </Button>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 h-[calc(70vh-140px)] py-4">
+        <ScrollArea className="flex-1 h-[calc(70vh-160px)] py-4">
           <div className="space-y-4">
             {comments.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
@@ -114,53 +241,37 @@ export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProp
               </p>
             ) : (
               comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3">
-                  <Avatar className="w-9 h-9">
-                    <AvatarImage src={comment.profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-secondary text-foreground text-xs">
-                      {(comment.profiles?.display_name || comment.profiles?.username || "U")[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">
-                        {comment.profiles?.username || "user"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-foreground mt-1">
-                      {comment.content}
-                    </p>
-                  </div>
-                </div>
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  onReply={handleReply}
+                  onLikeChange={handleLikeChange}
+                  createNotification={createNotification}
+                />
               ))
             )}
           </div>
         </ScrollArea>
 
         {/* Comment input */}
-        <form onSubmit={handleSubmit} className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border">
-          <div className="flex gap-2">
-            <Input
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder={user ? "Add a comment..." : "Sign in to comment"}
-              disabled={!user || loading}
-              className="flex-1 bg-secondary border-none text-foreground placeholder:text-muted-foreground"
-            />
-            <Button 
-              type="submit" 
-              size="icon"
-              disabled={!user || !newComment.trim() || loading}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-        </form>
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border">
+          <MentionInput
+            value={newComment}
+            onChange={setNewComment}
+            onSubmit={handleSubmit}
+            placeholder={user ? "Add a comment..." : "Sign in to comment"}
+            disabled={!user}
+            loading={loading}
+            replyingTo={
+              replyingTo
+                ? {
+                    username: replyingTo.profiles?.username || "user",
+                    onCancel: cancelReply,
+                  }
+                : null
+            }
+          />
+        </div>
       </SheetContent>
     </Sheet>
   );
