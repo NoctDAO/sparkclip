@@ -208,6 +208,7 @@ export function VideoCard({
           caption={video.caption}
           hashtags={video.hashtags}
           isFollowing={isFollowing}
+          sound={video.sound}
         />
       </div>
 

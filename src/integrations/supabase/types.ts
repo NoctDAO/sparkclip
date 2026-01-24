@@ -257,6 +257,85 @@ export type Database = {
         }
         Relationships: []
       }
+      sound_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          sound_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sound_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sound_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sound_favorites_sound_id_fkey"
+            columns: ["sound_id"]
+            isOneToOne: false
+            referencedRelation: "sounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sounds: {
+        Row: {
+          artist: string | null
+          audio_url: string
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          duration_seconds: number | null
+          id: string
+          is_original: boolean
+          original_video_id: string | null
+          title: string
+          uses_count: number
+        }
+        Insert: {
+          artist?: string | null
+          audio_url: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_original?: boolean
+          original_video_id?: string | null
+          title: string
+          uses_count?: number
+        }
+        Update: {
+          artist?: string | null
+          audio_url?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_original?: boolean
+          original_video_id?: string | null
+          title?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sounds_original_video_id_fkey"
+            columns: ["original_video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           caption: string | null
@@ -266,6 +345,7 @@ export type Database = {
           id: string
           likes_count: number | null
           shares_count: number | null
+          sound_id: string | null
           thumbnail_url: string | null
           user_id: string
           video_url: string
@@ -279,6 +359,7 @@ export type Database = {
           id?: string
           likes_count?: number | null
           shares_count?: number | null
+          sound_id?: string | null
           thumbnail_url?: string | null
           user_id: string
           video_url: string
@@ -292,12 +373,21 @@ export type Database = {
           id?: string
           likes_count?: number | null
           shares_count?: number | null
+          sound_id?: string | null
           thumbnail_url?: string | null
           user_id?: string
           video_url?: string
           views_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "videos_sound_id_fkey"
+            columns: ["sound_id"]
+            isOneToOne: false
+            referencedRelation: "sounds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
