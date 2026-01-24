@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Sound } from "@/types/video";
 
 interface VideoInfoProps {
   userId: string;
@@ -15,6 +16,7 @@ interface VideoInfoProps {
   caption: string | null;
   hashtags: string[] | null;
   isFollowing?: boolean;
+  sound?: Sound | null;
 }
 
 export function VideoInfo({
@@ -25,6 +27,7 @@ export function VideoInfo({
   caption,
   hashtags,
   isFollowing = false,
+  sound,
 }: VideoInfoProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -116,13 +119,27 @@ export function VideoInfo({
         </div>
       )}
 
-      {/* Sound info (placeholder) */}
-      <div className="flex items-center gap-2 mt-1">
-        <Music className="w-4 h-4 text-foreground" />
-        <span className="text-sm text-foreground truncate max-w-[200px]">
-          Original sound - {displayName || username || "user"}
-        </span>
-      </div>
+      {/* Sound info */}
+      {sound ? (
+        <Link 
+          to={`/sounds/${sound.id}`}
+          className="flex items-center gap-2 mt-1 group"
+        >
+          <div className="w-4 h-4 flex items-center justify-center animate-spin" style={{ animationDuration: "3s" }}>
+            <Music className="w-4 h-4 text-foreground" />
+          </div>
+          <span className="text-sm text-foreground truncate max-w-[200px] group-hover:underline">
+            {sound.title} - {sound.artist || "Unknown"}
+          </span>
+        </Link>
+      ) : (
+        <div className="flex items-center gap-2 mt-1">
+          <Music className="w-4 h-4 text-foreground" />
+          <span className="text-sm text-foreground truncate max-w-[200px]">
+            Original sound - {displayName || username || "user"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

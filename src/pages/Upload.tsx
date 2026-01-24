@@ -1,15 +1,18 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload as UploadIcon, X, Hash } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Upload as UploadIcon, X, Hash, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { SoundPicker } from "@/components/sounds/SoundPicker";
+import { Sound } from "@/types/video";
 
 export default function Upload() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -19,6 +22,28 @@ export default function Upload() {
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [selectedSound, setSelectedSound] = useState<Sound | null>(null);
+  const [soundPickerOpen, setSoundPickerOpen] = useState(false);
+
+  // Load sound from URL params if navigating from sound detail page
+  useEffect(() => {
+    const soundId = searchParams.get("soundId");
+    if (soundId) {
+      loadSound(soundId);
+    }
+  }, [searchParams]);
+
+  const loadSound = async (soundId: string) => {
+    const { data } = await supabase
+      .from("sounds")
+      .select("*")
+      .eq("id", soundId)
+      .single();
+    
+    if (data) {
+      setSelectedSound(data as Sound);
+    }
+  };
 
   if (!user) {
     navigate("/auth");
@@ -78,6 +103,7 @@ export default function Upload() {
         video_url: publicUrl,
         caption: caption.trim() || null,
         hashtags: hashtagArray.length > 0 ? hashtagArray : null,
+        sound_id: selectedSound?.id || null,
       });
 
       if (insertError) throw insertError;
@@ -157,6 +183,54 @@ export default function Upload() {
           className="hidden"
         />
 
+        {/* Sound Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Music className="w-4 h-4" />
+            Sound
+          </label>
+          {selectedSound ? (
+            <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
+              <div className="w-10 h-10 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                {selectedSound.cover_url ? (
+                  <img 
+                    src={selectedSound.cover_url} 
+                    alt={selectedSound.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
+                    <span>♪</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{selectedSound.title}</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {selectedSound.artist || "Unknown"}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedSound(null)}
+                className="text-destructive"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setSoundPickerOpen(true)}
+              className="w-full justify-start gap-2"
+            >
+              <Music className="w-4 h-4" />
+              Add sound
+            </Button>
+          )}
+        </div>
+
         {/* Caption */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Caption</label>
@@ -196,6 +270,13 @@ export default function Upload() {
           {uploading ? "Uploading..." : "Post"}
         </Button>
       </div>
+
+      <SoundPicker
+        open={soundPickerOpen}
+        onOpenChange={setSoundPickerOpen}
+        onSelectSound={setSelectedSound}
+        selectedSound={selectedSound}
+      />
     </div>
   );
 }

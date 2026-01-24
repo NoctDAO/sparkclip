@@ -58,12 +58,26 @@ export function VideoFeed({ feedType = "foryou" }: VideoFeedProps) {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
       
-      const videosWithProfiles = data.map(video => ({
+      // Fetch sounds for videos that have sound_id
+      const soundIds = [...new Set(data.filter(v => v.sound_id).map(v => v.sound_id))];
+      let soundMap = new Map();
+      
+      if (soundIds.length > 0) {
+        const { data: sounds } = await supabase
+          .from("sounds")
+          .select("*")
+          .in("id", soundIds);
+        
+        soundMap = new Map(sounds?.map(s => [s.id, s]) || []);
+      }
+      
+      const videosWithData = data.map(video => ({
         ...video,
         profiles: profileMap.get(video.user_id) || null,
+        sound: video.sound_id ? soundMap.get(video.sound_id) || null : null,
       }));
       
-      setVideos(videosWithProfiles as Video[]);
+      setVideos(videosWithData as Video[]);
     }
     
     setLoading(false);

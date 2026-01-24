@@ -14,6 +14,8 @@ import EditProfile from "./pages/EditProfile";
 import Settings from "./pages/Settings";
 import ChangePassword from "./pages/ChangePassword";
 import FollowList from "./pages/FollowList";
+import Sounds from "./pages/Sounds";
+import SoundDetail from "./pages/SoundDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/password" element={<ChangePassword />} />
             <Route path="/follow-list/:userId" element={<FollowList />} />
+            <Route path="/sounds" element={<Sounds />} />
+            <Route path="/sounds/:soundId" element={<SoundDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,3 +1,18 @@
+export interface Sound {
+  id: string;
+  title: string;
+  artist: string | null;
+  audio_url: string;
+  cover_url: string | null;
+  duration_seconds: number | null;
+  uses_count: number;
+  is_original: boolean;
+  original_video_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  isFavorite?: boolean;
+}
+
 export interface Video {
   id: string;
   user_id: string;
@@ -9,12 +24,14 @@ export interface Video {
   comments_count: number;
   shares_count: number;
   views_count: number;
+  sound_id: string | null;
   created_at: string;
   profiles?: {
     username: string | null;
     display_name: string | null;
     avatar_url: string | null;
   };
+  sound?: Sound;
 }
 
 export interface Comment {
