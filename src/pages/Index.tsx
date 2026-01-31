@@ -3,14 +3,20 @@ import { Helmet } from "react-helmet-async";
 import { VideoFeed } from "@/components/video/VideoFeed";
 import { FeedTabs } from "@/components/layout/FeedTabs";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { useNavBarPreference } from "@/hooks/useNavBarPreference";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"foryou" | "following">("foryou");
   const [barsVisible, setBarsVisible] = useState(true);
+  const { autoHideEnabled } = useNavBarPreference();
 
   const handleScrollDirectionChange = useCallback((isScrollingUp: boolean) => {
-    setBarsVisible(isScrollingUp);
-  }, []);
+    if (autoHideEnabled) {
+      setBarsVisible(isScrollingUp);
+    } else {
+      setBarsVisible(true);
+    }
+  }, [autoHideEnabled]);
 
   // SEO metadata
   const siteName = "VidShare";
