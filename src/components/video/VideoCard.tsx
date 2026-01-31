@@ -47,6 +47,7 @@ export function VideoCard({
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState<"left" | "right" | null>(null);
   const [showNextPartHint, setShowNextPartHint] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Keep overlays safely above the fixed bottom nav (and device safe-area)
   // Uses --ui-safe-margin which can be changed via Settings > Display
@@ -56,6 +57,7 @@ export function VideoCard({
   const lastTapRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const isSwipingRef = useRef(false);
+  const swipeLockedRef = useRef(false);
   const isInSeries = !!(video.series_id && video.series_order);
 
   const handleVideoEnd = useCallback(async () => {
@@ -81,16 +83,19 @@ export function VideoCard({
   }, [autoPlayEnabled, video.series_id, video.series_order, getNextVideoInSeries, navigate, onNavigateToVideo, toast]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Don't start new swipe if navigation is in progress
+    if (isNavigating || swipeLockedRef.current) return;
+    
     touchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
       time: Date.now(),
     };
     isSwipingRef.current = false;
-  }, []);
+  }, [isNavigating]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
+    if (!touchStartRef.current || isNavigating || swipeLockedRef.current) return;
 
     const deltaX = e.touches[0].clientX - touchStartRef.current.x;
     const deltaY = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
@@ -98,7 +103,10 @@ export function VideoCard({
     // Only track horizontal swipes (ignore vertical scrolling)
     if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
       isSwipingRef.current = true;
-      setSwipeOffset(deltaX);
+      
+      // Apply damping to swipe offset (max 150px) for smoother feel
+      const dampedOffset = Math.sign(deltaX) * Math.min(Math.abs(deltaX) * 0.6, 150);
+      setSwipeOffset(dampedOffset);
       
       // Show appropriate hint based on direction and context
       if (isInSeries) {
@@ -119,74 +127,7 @@ export function VideoCard({
         }
       }
     }
-  }, [isInSeries]);
-
-  const handleTouchEnd = useCallback(async (e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-
-    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
-    const deltaTime = Date.now() - touchStartRef.current.time;
-    
-    // Swipe thresholds
-    const isSwipeLeft = deltaX < -100 || (deltaX < -50 && deltaTime < 300);
-    const isSwipeRight = deltaX > 100 || (deltaX > 50 && deltaTime < 300);
-
-    // Haptic feedback helper
-    const triggerHaptic = (pattern: number | number[] = 50) => {
-      if ("vibrate" in navigator) {
-        navigator.vibrate(pattern);
-      }
-    };
-
-    if (isSwipingRef.current) {
-      if (isInSeries && video.series_id && video.series_order) {
-        // Series navigation
-        if (isSwipeLeft) {
-          // Swipe left = next part
-          const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
-          if (nextVideo) {
-            triggerHaptic([30, 20, 30]); // Double tap pattern for success
-            toast({ title: `Part ${nextVideo.series_order}`, duration: 1500 });
-            if (onNavigateToVideo) {
-              onNavigateToVideo(nextVideo.id);
-            } else {
-              navigate(`/video/${nextVideo.id}`);
-            }
-          } else {
-            triggerHaptic(100); // Longer vibration for boundary
-            toast({ title: "This is the last part", duration: 1500 });
-          }
-        } else if (isSwipeRight) {
-          // Swipe right = previous part
-          const prevVideo = await getPreviousVideoInSeries(video.series_id, video.series_order);
-          if (prevVideo) {
-            triggerHaptic([30, 20, 30]); // Double tap pattern for success
-            toast({ title: `Part ${prevVideo.series_order}`, duration: 1500 });
-            if (onNavigateToVideo) {
-              onNavigateToVideo(prevVideo.id);
-            } else {
-              navigate(`/video/${prevVideo.id}`);
-            }
-          } else {
-            triggerHaptic(100); // Longer vibration for boundary
-            toast({ title: "This is the first part", duration: 1500 });
-          }
-        }
-      } else if (isSwipeLeft) {
-        // Not in series: swipe left goes to profile
-        navigate(`/profile/${video.user_id}`);
-      }
-    } else {
-      // Handle double tap for like
-      handleDoubleTapLogic(e);
-    }
-
-    // Reset
-    setSwipeOffset(0);
-    setShowSwipeHint(null);
-    touchStartRef.current = null;
-    isSwipingRef.current = false;
-  }, [isInSeries, video.series_id, video.series_order, video.user_id, navigate, getNextVideoInSeries, getPreviousVideoInSeries, onNavigateToVideo, toast]);
+  }, [isInSeries, isNavigating]);
 
   const handleDoubleTapLogic = useCallback(async (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now();
@@ -226,6 +167,91 @@ export function VideoCard({
 
     lastTapRef.current = now;
   }, [liked, user, video.id]);
+
+  const handleTouchEnd = useCallback(async (e: React.TouchEvent) => {
+    if (!touchStartRef.current || isNavigating || swipeLockedRef.current) {
+      // Reset state even if we're blocked
+      setSwipeOffset(0);
+      setShowSwipeHint(null);
+      touchStartRef.current = null;
+      return;
+    }
+
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaTime = Date.now() - touchStartRef.current.time;
+    
+    // Swipe thresholds
+    const isSwipeLeft = deltaX < -100 || (deltaX < -50 && deltaTime < 300);
+    const isSwipeRight = deltaX > 100 || (deltaX > 50 && deltaTime < 300);
+
+    // Haptic feedback helper
+    const triggerHaptic = (pattern: number | number[] = 50) => {
+      if ("vibrate" in navigator) {
+        navigator.vibrate(pattern);
+      }
+    };
+
+    if (isSwipingRef.current) {
+      // Lock swipe to prevent multiple triggers
+      swipeLockedRef.current = true;
+      
+      if (isInSeries && video.series_id && video.series_order) {
+        // Series navigation
+        if (isSwipeLeft) {
+          setIsNavigating(true);
+          // Swipe left = next part
+          const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
+          if (nextVideo) {
+            triggerHaptic([30, 20, 30]);
+            toast({ title: `Part ${nextVideo.series_order}`, duration: 1500 });
+            if (onNavigateToVideo) {
+              onNavigateToVideo(nextVideo.id);
+            } else {
+              navigate(`/video/${nextVideo.id}`);
+            }
+          } else {
+            triggerHaptic(100);
+            toast({ title: "This is the last part", duration: 1500 });
+            setIsNavigating(false);
+          }
+        } else if (isSwipeRight) {
+          setIsNavigating(true);
+          // Swipe right = previous part
+          const prevVideo = await getPreviousVideoInSeries(video.series_id, video.series_order);
+          if (prevVideo) {
+            triggerHaptic([30, 20, 30]);
+            toast({ title: `Part ${prevVideo.series_order}`, duration: 1500 });
+            if (onNavigateToVideo) {
+              onNavigateToVideo(prevVideo.id);
+            } else {
+              navigate(`/video/${prevVideo.id}`);
+            }
+          } else {
+            triggerHaptic(100);
+            toast({ title: "This is the first part", duration: 1500 });
+            setIsNavigating(false);
+          }
+        }
+      } else if (isSwipeLeft) {
+        // Not in series: swipe left goes to profile
+        navigate(`/profile/${video.user_id}`);
+      }
+      
+      // Unlock after a short delay to prevent rapid re-triggering
+      setTimeout(() => {
+        swipeLockedRef.current = false;
+      }, 500);
+    } else {
+      // Handle double tap for like
+      handleDoubleTapLogic(e);
+    }
+
+    // Reset
+    setSwipeOffset(0);
+    setShowSwipeHint(null);
+    touchStartRef.current = null;
+    isSwipingRef.current = false;
+  }, [isInSeries, video.series_id, video.series_order, video.user_id, navigate, getNextVideoInSeries, getPreviousVideoInSeries, onNavigateToVideo, toast, isNavigating, handleDoubleTapLogic]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     handleDoubleTapLogic(e);
