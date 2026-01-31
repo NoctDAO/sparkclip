@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ReportDialog } from "@/components/ReportDialog";
 import { AddToSeriesSheet } from "@/components/video/AddToSeriesSheet";
+import { DuetButton } from "@/components/video/DuetButton";
 
 interface VideoActionsProps {
   videoId: string;
@@ -17,6 +18,7 @@ interface VideoActionsProps {
   initialViews?: number;
   isLiked?: boolean;
   isBookmarked?: boolean;
+  allowDuets?: boolean;
   onCommentClick: () => void;
   onLikeChange?: (liked: boolean, count: number) => void;
 }
@@ -30,6 +32,7 @@ export function VideoActions({
   initialViews = 0,
   isLiked = false,
   isBookmarked = false,
+  allowDuets = true,
   onCommentClick,
   onLikeChange,
 }: VideoActionsProps) {
@@ -210,6 +213,11 @@ export function VideoActions({
           {formatCount(initialShares)}
         </span>
       </button>
+
+      {/* Duet - for other users' videos that allow duets */}
+      {!isOwnVideo && (
+        <DuetButton videoId={videoId} allowDuets={allowDuets} isOwnVideo={isOwnVideo} />
+      )}
 
       {/* Add to Series - only for own videos */}
       {isOwnVideo && (
