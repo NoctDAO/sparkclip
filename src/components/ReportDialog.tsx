@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { useRateLimit } from "@/hooks/useRateLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,6 +42,7 @@ export function ReportDialog({
 }: ReportDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { handleRateLimitError } = useRateLimit("default");
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,11 +87,14 @@ export function ReportDialog({
       setDetails("");
     } catch (error) {
       console.error("Report error:", error);
-      toast({
-        title: "Failed to submit report",
-        description: "Please try again later",
-        variant: "destructive",
-      });
+      // Check if it's a rate limit error and show friendly message
+      if (!handleRateLimitError(error, "report")) {
+        toast({
+          title: "Failed to submit report",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }

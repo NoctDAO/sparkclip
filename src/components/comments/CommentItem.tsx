@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useRateLimit } from "@/hooks/useRateLimit";
 import { ReportDialog } from "@/components/ReportDialog";
 
 interface CommentItemProps {
@@ -56,6 +57,7 @@ export function CommentItem({
 }: CommentItemProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { handleRateLimitError } = useRateLimit("like");
   const [showReplies, setShowReplies] = useState(false);
   const [liking, setLiking] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -77,16 +79,20 @@ export function CommentItem({
 
     try {
       if (isCurrentlyLiked) {
-        await supabase
+        const { error } = await supabase
           .from("comment_likes")
           .delete()
           .eq("user_id", user.id)
           .eq("comment_id", comment.id);
+        
+        if (error) throw error;
       } else {
-        await supabase.from("comment_likes").insert({
+        const { error } = await supabase.from("comment_likes").insert({
           user_id: user.id,
           comment_id: comment.id,
         });
+
+        if (error) throw error;
 
         // Create notification for comment author
         if (createNotification && comment.user_id !== user.id) {
@@ -101,7 +107,10 @@ export function CommentItem({
     } catch (error) {
       // Revert on error
       onLikeChange(comment.id, isCurrentlyLiked!, comment.likes_count);
-      toast({ title: "Failed to update like", variant: "destructive" });
+      // Check if it's a rate limit error and show friendly message
+      if (!handleRateLimitError(error, "like")) {
+        toast({ title: "Failed to update like", variant: "destructive" });
+      }
     }
 
     setLiking(false);
