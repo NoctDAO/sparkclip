@@ -250,6 +250,7 @@ export function VideoCard({
       >
         <VideoActions
           videoId={video.id}
+          videoUserId={video.user_id}
           initialLikes={likesCount}
           initialComments={video.comments_count}
           initialShares={video.shares_count}

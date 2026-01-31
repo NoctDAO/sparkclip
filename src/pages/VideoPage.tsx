@@ -375,6 +375,7 @@ export default function VideoPage() {
       <div className="absolute right-3 bottom-24 pointer-events-auto z-10">
         <VideoActions
           videoId={video.id}
+          videoUserId={video.user_id}
           initialLikes={likesCount}
           initialComments={video.comments_count}
           initialShares={video.shares_count}
