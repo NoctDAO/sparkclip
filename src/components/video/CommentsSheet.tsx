@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Lock } from "lucide-react";
+import { X, Lock, Ban } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { useUserPrivacy } from "@/hooks/useUserPrivacy";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Comment } from "@/types/video";
@@ -26,10 +27,17 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
   const { checkRateLimit: checkCommentLimit } = useRateLimit("comment");
   const { createNotification } = useNotifications();
   const { canComment, settings: ownerPrivacy } = useUserPrivacy(videoOwnerId);
+  const { blockedUsers, isUserBlocked } = useBlockedUsers();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  
+  // Get blocked user IDs for filtering comments
+  const blockedUserIds = new Set(blockedUsers.map(b => b.blocked_user_id));
+  
+  // Check if the video owner has blocked the current user
+  const isBlockedByOwner = user ? isUserBlocked(videoOwnerId) : false;
 
   const fetchComments = useCallback(async () => {
     // Fetch all comments for this video
@@ -65,13 +73,15 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
       likedCommentIds = new Set(likes?.map((l) => l.comment_id) || []);
     }
 
-    // Build comment tree
-    const commentsWithProfiles = commentsData.map((comment) => ({
-      ...comment,
-      profiles: profileMap.get(comment.user_id) || null,
-      isLiked: likedCommentIds.has(comment.id),
-      replies: [] as Comment[],
-    })) as Comment[];
+    // Build comment tree and filter out blocked users
+    const commentsWithProfiles = commentsData
+      .filter(comment => !blockedUserIds.has(comment.user_id)) // Filter blocked users
+      .map((comment) => ({
+        ...comment,
+        profiles: profileMap.get(comment.user_id) || null,
+        isLiked: likedCommentIds.has(comment.id),
+        replies: [] as Comment[],
+      })) as Comment[];
 
     // Separate top-level comments and replies
     const topLevelComments: Comment[] = [];
@@ -87,16 +97,17 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
       }
     });
 
-    // Attach replies to parent comments
+    // Attach replies to parent comments (also filtered)
     topLevelComments.forEach((comment) => {
-      const replies = repliesMap.get(comment.id) || [];
+      const replies = (repliesMap.get(comment.id) || [])
+        .filter(reply => !blockedUserIds.has(reply.user_id));
       // Sort replies by oldest first
       replies.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       comment.replies = replies;
     });
 
     setComments(topLevelComments);
-  }, [videoId, user]);
+  }, [videoId, user, blockedUserIds.size]);
 
   useEffect(() => {
     if (open) {
@@ -262,7 +273,12 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
 
         {/* Comment input */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border">
-          {!canComment() ? (
+          {isBlockedByOwner ? (
+            <div className="flex items-center justify-center gap-2 text-muted-foreground py-2">
+              <Ban className="w-4 h-4" />
+              <span className="text-sm">You can't comment on this video</span>
+            </div>
+          ) : !canComment() ? (
             <div className="flex items-center justify-center gap-2 text-muted-foreground py-2">
               <Lock className="w-4 h-4" />
               <span className="text-sm">

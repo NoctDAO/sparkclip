@@ -3,6 +3,7 @@ import { VideoCard } from "./VideoCard";
 import { Video } from "@/types/video";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import { Loader2 } from "lucide-react";
 
 interface VideoFeedProps {
@@ -17,6 +18,7 @@ export function VideoFeed({
   bottomNavVisible = true,
 }: VideoFeedProps) {
   const { user } = useAuth();
+  const { blockedUsers } = useBlockedUsers();
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,8 @@ export function VideoFeed({
     following: Set<string>;
   }>({ likes: new Set(), bookmarks: new Set(), following: new Set() });
   
+  // Get blocked user IDs for filtering
+  const blockedUserIds = new Set(blockedUsers.map(b => b.blocked_user_id));
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const lastTouchY = useRef(0);
@@ -78,17 +82,19 @@ export function VideoFeed({
         soundMap = new Map(sounds?.map(s => [s.id, s]) || []);
       }
       
-      const videosWithData = data.map(video => ({
-        ...video,
-        profiles: profileMap.get(video.user_id) || null,
-        sound: video.sound_id ? soundMap.get(video.sound_id) || null : null,
-      }));
+      const videosWithData = data
+        .filter(video => !blockedUserIds.has(video.user_id)) // Filter out blocked users
+        .map(video => ({
+          ...video,
+          profiles: profileMap.get(video.user_id) || null,
+          sound: video.sound_id ? soundMap.get(video.sound_id) || null : null,
+        }));
       
       setVideos(videosWithData as Video[]);
     }
     
     setLoading(false);
-  }, [feedType, user]);
+  }, [feedType, user, blockedUserIds.size]);
 
   const fetchUserInteractions = useCallback(async () => {
     if (!user) return;
