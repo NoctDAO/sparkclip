@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft } from "lucide-react";
+import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -349,7 +349,7 @@ export default function Profile() {
               {videos.map((video) => (
                 <div 
                   key={video.id} 
-                  className="aspect-[9/16] bg-secondary cursor-pointer"
+                  className="aspect-[9/16] bg-secondary cursor-pointer relative group"
                   onClick={() => navigate(`/?video=${video.id}`)}
                 >
                   {video.thumbnail_url ? (
@@ -365,6 +365,11 @@ export default function Profile() {
                       muted
                     />
                   )}
+                  {/* View count overlay */}
+                  <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                    <Eye className="w-3 h-3" />
+                    <span>{formatCount(video.views_count)}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -384,7 +389,7 @@ export default function Profile() {
                   {likedVideos.map((video) => (
                     <div 
                       key={video.id} 
-                      className="aspect-[9/16] bg-secondary cursor-pointer"
+                      className="aspect-[9/16] bg-secondary cursor-pointer relative"
                       onClick={() => navigate(`/?video=${video.id}`)}
                     >
                       {video.thumbnail_url ? (
@@ -392,6 +397,10 @@ export default function Profile() {
                       ) : (
                         <video src={video.video_url} className="w-full h-full object-cover" muted />
                       )}
+                      <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                        <Eye className="w-3 h-3" />
+                        <span>{formatCount(video.views_count)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -409,7 +418,7 @@ export default function Profile() {
                   {savedVideos.map((video) => (
                     <div 
                       key={video.id} 
-                      className="aspect-[9/16] bg-secondary cursor-pointer"
+                      className="aspect-[9/16] bg-secondary cursor-pointer relative"
                       onClick={() => navigate(`/?video=${video.id}`)}
                     >
                       {video.thumbnail_url ? (
@@ -417,6 +426,10 @@ export default function Profile() {
                       ) : (
                         <video src={video.video_url} className="w-full h-full object-cover" muted />
                       )}
+                      <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                        <Eye className="w-3 h-3" />
+                        <span>{formatCount(video.views_count)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

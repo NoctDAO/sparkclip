@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Search, TrendingUp } from "lucide-react";
+import { Search, TrendingUp, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { TrendingSounds } from "@/components/sounds/TrendingSounds";
@@ -63,6 +63,12 @@ export default function Discover() {
       users: (usersRes.data || []) as Profile[],
     });
     setIsSearching(false);
+  };
+
+  const formatCount = (count: number) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
   };
 
   const trendingHashtags = [
@@ -192,7 +198,7 @@ export default function Discover() {
               {trendingVideos.map((video) => (
                 <div
                   key={video.id}
-                  className="aspect-[9/16] bg-secondary cursor-pointer overflow-hidden rounded-sm"
+                  className="aspect-[9/16] bg-secondary cursor-pointer overflow-hidden rounded-sm relative"
                   onClick={() => navigate(`/?video=${video.id}`)}
                 >
                   {video.thumbnail_url ? (
@@ -208,6 +214,10 @@ export default function Discover() {
                       muted
                     />
                   )}
+                  <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                    <Eye className="w-3 h-3" />
+                    <span>{formatCount(video.views_count)}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -266,7 +276,7 @@ export default function Discover() {
                     {searchResults.videos.map((video) => (
                       <div
                         key={video.id}
-                        className="aspect-[9/16] bg-secondary cursor-pointer overflow-hidden rounded-sm"
+                        className="aspect-[9/16] bg-secondary cursor-pointer overflow-hidden rounded-sm relative"
                         onClick={() => navigate(`/?video=${video.id}`)}
                       >
                         {video.thumbnail_url ? (
@@ -282,6 +292,10 @@ export default function Discover() {
                             muted
                           />
                         )}
+                        <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                          <Eye className="w-3 h-3" />
+                          <span>{formatCount(video.views_count)}</span>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ interface VideoActionsProps {
   initialLikes: number;
   initialComments: number;
   initialShares: number;
+  initialViews?: number;
   isLiked?: boolean;
   isBookmarked?: boolean;
   onCommentClick: () => void;
@@ -21,6 +22,7 @@ export function VideoActions({
   initialLikes,
   initialComments,
   initialShares,
+  initialViews = 0,
   isLiked = false,
   isBookmarked = false,
   onCommentClick,
@@ -124,6 +126,16 @@ export function VideoActions({
 
   return (
     <div className="flex flex-col items-center gap-5">
+      {/* Views */}
+      <div className="flex flex-col items-center gap-1">
+        <div className="p-3 rounded-full bg-secondary/80">
+          <Eye className="w-7 h-7 text-foreground" />
+        </div>
+        <span className="text-xs font-semibold text-foreground">
+          {formatCount(initialViews)}
+        </span>
+      </div>
+
       {/* Like */}
       <button
         onClick={handleLike}
