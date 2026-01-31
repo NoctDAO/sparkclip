@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, MessageSquare, Heart, UserPlus, AtSign, Check } from "lucide-react";
+import { ArrowLeft, Bell, MessageSquare, Heart, UserPlus, AtSign, Check, Layers } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +26,9 @@ function getNotificationMessage(notification: Notification): string {
       return `${actorName} liked your video`;
     case "follow":
       return `${actorName} started following you`;
+    case "new_series_part":
+      const seriesTitle = notification.video?.series?.title || "a series";
+      return `${actorName} added a new part to ${seriesTitle}`;
     default:
       return `${actorName} interacted with you`;
   }
@@ -42,6 +45,8 @@ function getNotificationIcon(type: Notification["type"]) {
       return MessageSquare;
     case "follow":
       return UserPlus;
+    case "new_series_part":
+      return Layers;
     default:
       return Bell;
   }
@@ -114,6 +119,8 @@ function NotificationItem({
               ? "bg-primary/20 text-primary"
               : notification.type === "follow"
               ? "bg-accent/20 text-accent"
+              : notification.type === "new_series_part"
+              ? "bg-blue-500/20 text-blue-500"
               : "bg-muted text-foreground"
           )}
         >

@@ -37,15 +37,30 @@ export function useNotifications() {
       const profileMap = new Map<string, { user_id: string; username: string | null; display_name: string | null; avatar_url: string | null }>();
       profiles?.forEach((p) => profileMap.set(p.user_id, p));
 
-      // Fetch video thumbnails
+      // Fetch video thumbnails and series info
       const videoIds = [...new Set(data.filter((n) => n.video_id).map((n) => n.video_id!))];
-      let videoMap = new Map<string, { id: string; thumbnail_url: string | null }>();
+      let videoMap = new Map<string, { id: string; thumbnail_url: string | null; series_id?: string | null; series?: { id: string; title: string } | null }>();
       if (videoIds.length > 0) {
         const { data: videos } = await supabase
           .from("videos")
-          .select("id, thumbnail_url")
+          .select("id, thumbnail_url, series_id")
           .in("id", videoIds);
-        videos?.forEach((v) => videoMap.set(v.id, v));
+        
+        // Fetch series info for videos that belong to series
+        const seriesIds = [...new Set(videos?.filter((v) => v.series_id).map((v) => v.series_id!) || [])];
+        let seriesMap = new Map<string, { id: string; title: string }>();
+        if (seriesIds.length > 0) {
+          const { data: seriesData } = await supabase
+            .from("video_series")
+            .select("id, title")
+            .in("id", seriesIds);
+          seriesData?.forEach((s) => seriesMap.set(s.id, s));
+        }
+        
+        videos?.forEach((v) => videoMap.set(v.id, {
+          ...v,
+          series: v.series_id ? seriesMap.get(v.series_id) || null : null,
+        }));
       }
 
       // Fetch comment content for comment-related notifications

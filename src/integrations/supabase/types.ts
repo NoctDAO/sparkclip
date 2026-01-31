@@ -509,6 +509,35 @@ export type Database = {
         }
         Relationships: []
       }
+      series_follows: {
+        Row: {
+          created_at: string
+          id: string
+          series_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          series_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          series_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_follows_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "video_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sound_favorites: {
         Row: {
           created_at: string
