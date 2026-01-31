@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Heart, MessageCircle, ChevronDown, ChevronUp, Flag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Comment } from "@/types/video";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { ReportDialog } from "@/components/ReportDialog";
 
 interface CommentItemProps {
   comment: Comment;
@@ -57,6 +58,7 @@ export function CommentItem({
   const { toast } = useToast();
   const [showReplies, setShowReplies] = useState(false);
   const [liking, setLiking] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   const handleLike = async () => {
     if (!user) {
@@ -163,7 +165,22 @@ export function CommentItem({
               <span className="text-xs">Reply</span>
             </button>
           )}
+
+          <button
+            onClick={() => setShowReportDialog(true)}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Flag className="w-4 h-4" />
+            <span className="text-xs">Report</span>
+          </button>
         </div>
+
+        <ReportDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          contentId={comment.id}
+          contentType="comment"
+        />
 
         {/* Show/Hide Replies */}
         {hasReplies && !isReply && (
