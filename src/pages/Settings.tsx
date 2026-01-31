@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,7 +12,12 @@ import {
   Trash2,
   BarChart3,
   ShieldAlert,
+  Mail,
+  Calendar,
+  CheckCircle,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { SettingsItem } from "@/components/settings/SettingsItem";
 import { UiMarginSetting } from "@/components/settings/UiMarginSetting";
 import { NavBarToggle } from "@/components/settings/NavBarToggle";
@@ -22,6 +27,8 @@ import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,15 +40,42 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface Profile {
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 export default function Settings() {
   const navigate = useNavigate();
   const { user, session, signOut } = useAuth();
-  const { isAdmin, isModerator } = useUserRoles(user?.id);
+  const { isAdmin, isModerator, isVerified } = useUserRoles(user?.id);
   const { toast } = useToast();
 
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile();
+    }
+  }, [user?.id]);
+
+  const fetchProfile = async () => {
+    if (!user?.id) return;
+    
+    const { data } = await supabase
+      .from("profiles")
+      .select("username, display_name, avatar_url")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (data) {
+      setProfile(data);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -110,6 +144,61 @@ export default function Settings() {
       </header>
 
       <div className="py-4">
+        {/* User Info Card */}
+        {user && (
+          <div className="mx-4 mb-6 p-4 bg-secondary/30 rounded-xl">
+            <div className="flex items-center gap-4">
+              <Avatar className="w-16 h-16">
+                <AvatarImage src={profile?.avatar_url || undefined} />
+                <AvatarFallback className="text-lg bg-primary/10">
+                  {(profile?.display_name || profile?.username || user.email || "U")[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-lg truncate">
+                    {profile?.display_name || profile?.username || "User"}
+                  </h2>
+                  {isVerified && (
+                    <Badge variant="secondary" className="shrink-0">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Verified
+                    </Badge>
+                  )}
+                  {isAdmin && (
+                    <Badge className="shrink-0">Admin</Badge>
+                  )}
+                  {isModerator && !isAdmin && (
+                    <Badge variant="outline" className="shrink-0">Mod</Badge>
+                  )}
+                </div>
+                {profile?.username && (
+                  <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-3 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="truncate">{user.email}</span>
+                {user.email_confirmed_at && (
+                  <Badge variant="outline" className="text-xs shrink-0">
+                    <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
+                    Verified
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Calendar className="w-4 h-4 shrink-0" />
+                <span>
+                  Joined {user.created_at ? format(new Date(user.created_at), "MMMM d, yyyy") : "Unknown"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Account Section */}
         <div className="mb-6">
           <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
