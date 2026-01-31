@@ -6,7 +6,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile as ProfileType, Video } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +18,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const { isVerified } = useUserRoles(userId);
   
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -253,7 +256,10 @@ export default function Profile() {
           </AvatarFallback>
         </Avatar>
 
-        <h2 className="mt-3 font-bold text-lg">{profile.display_name || profile.username}</h2>
+        <h2 className="mt-3 font-bold text-lg flex items-center gap-1.5">
+          {profile.display_name || profile.username}
+          {isVerified && <VerifiedBadge size="md" />}
+        </h2>
 
         {/* Stats */}
         <div className="flex items-center gap-8 mt-4">

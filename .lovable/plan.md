@@ -150,22 +150,45 @@ USING (auth.uid() = follower_id OR auth.uid() = following_id);
 
 ## Implementation Order
 
-| Phase | Items | Estimated Effort |
-|-------|-------|------------------|
-| 1 | Security fixes (RLS, password protection) | Quick wins |
-| 2 | Auth enhancements (password reset, email verification) | Medium |
-| 3 | Video sound preference wiring | Quick |
-| 4 | Direct messaging system | Large feature |
-| 5 | Reporting system | Medium |
+| Phase | Items | Status |
+|-------|-------|--------|
+| 1 | Security fixes (RLS, password protection) | ✅ Done |
+| 2 | Auth enhancements (password reset, email verification) | ✅ Password reset done |
+| 3 | Video sound preference wiring | ✅ Done |
+| 4 | Direct messaging system | 🔜 Next |
+| 5 | Reporting system | ✅ Database ready |
 | 6 | Performance optimizations | Ongoing |
 
 ---
 
-## Recommended First Steps
+## Completed Items
 
-1. **Fix the critical security issues** - The exposed user behavior data is a privacy violation
-2. **Add password reset** - Essential for user recovery
-3. **Wire sound preferences** - Quick win using existing code
-4. **Implement DM system** - High-value feature for engagement
+### Phase 1: Security (Complete)
+- ✅ Fixed RLS policies for `likes`, `follows`, `comment_likes` (users see only their own)
+- ✅ Created `user_roles` table with `has_role()` function for verification badges
+- ✅ Created `reports` table for content moderation
+- ✅ Added DELETE policy to `user_interactions` for GDPR
+- ✅ Created `delete-user-data` edge function for account deletion
 
-Would you like me to start with the security fixes and then proceed to the features?
+### Phase 2: Auth Enhancements (Partial)
+- ✅ Added password reset flow (`/reset-password` page)
+- ✅ Added "Forgot password?" link on auth page
+
+### Phase 3: Video Sound (Complete)
+- ✅ Created `VideoSoundContext` for shared mute/volume state
+- ✅ Wired `VideoPlayer` to use persisted sound preferences
+
+### Additional
+- ✅ Created `VerifiedBadge` component
+- ✅ Added `useUserRoles` hook
+- ✅ Verified badges display on Profile page
+
+---
+
+## Remaining Work
+
+1. **Enable leaked password protection** - Requires admin action in dashboard
+2. **Email verification flow** - Add pending state UI
+3. **Direct messaging system** - Create messages/conversations tables
+4. **Rate limiting** - Add client-side throttling for social actions
+5. **Delete account UI** - Add button in Settings to call edge function

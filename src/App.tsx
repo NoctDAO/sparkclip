@@ -5,9 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
+import { VideoSoundProvider } from "@/contexts/VideoSoundContext";
 import { useAppViewportHeight } from "@/hooks/useAppViewportHeight";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Upload from "./pages/Upload";
 import Discover from "./pages/Discover";
@@ -33,32 +35,35 @@ const App = () => {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/profile/:userId" element={<Profile />} />
-                <Route path="/upload" element={<Upload />} />
-                <Route path="/discover" element={<Discover />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/hashtag/:tag" element={<HashtagPage />} />
-                <Route path="/inbox" element={<Inbox />} />
-                <Route path="/edit-profile" element={<EditProfile />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/settings/password" element={<ChangePassword />} />
-                <Route path="/follow-list/:userId" element={<FollowList />} />
-                <Route path="/sounds" element={<Sounds />} />
-                <Route path="/sounds/:soundId" element={<SoundDetail />} />
-                <Route path="/video/:videoId" element={<VideoPage />} />
-                <Route path="/analytics" element={<Analytics />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+          <VideoSoundProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/profile/:userId" element={<Profile />} />
+                  <Route path="/upload" element={<Upload />} />
+                  <Route path="/discover" element={<Discover />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/hashtag/:tag" element={<HashtagPage />} />
+                  <Route path="/inbox" element={<Inbox />} />
+                  <Route path="/edit-profile" element={<EditProfile />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/password" element={<ChangePassword />} />
+                  <Route path="/follow-list/:userId" element={<FollowList />} />
+                  <Route path="/sounds" element={<Sounds />} />
+                  <Route path="/sounds/:soundId" element={<SoundDetail />} />
+                  <Route path="/video/:videoId" element={<VideoPage />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </VideoSoundProvider>
         </AuthProvider>
       </QueryClientProvider>
     </HelmetProvider>

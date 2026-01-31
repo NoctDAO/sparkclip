@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Volume2, VolumeX, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVideoAnalytics } from "@/hooks/useVideoAnalytics";
+import { useVideoSound } from "@/contexts/VideoSoundContext";
 
 interface VideoPlayerProps {
   src: string;
@@ -13,8 +14,8 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { isMuted, toggleMute, volume } = useVideoSound();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
@@ -110,13 +111,9 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
     }
   };
 
-  const toggleMute = (e: React.MouseEvent) => {
+  const handleMuteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const video = videoRef.current;
-    if (!video) return;
-    
-    video.muted = !isMuted;
-    setIsMuted(!isMuted);
+    toggleMute();
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -165,7 +162,7 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
       
       {/* Mute toggle - positioned safely inside viewport */}
       <button
-        onClick={toggleMute}
+        onClick={handleMuteToggle}
         className={cn(
           "absolute p-2 rounded-full transition-all z-10",
           isMuted 
