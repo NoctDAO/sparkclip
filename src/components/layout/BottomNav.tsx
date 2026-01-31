@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Plus, MessageCircle, User } from "lucide-react";
+import { Home, Compass, Plus, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -15,7 +15,7 @@ export function BottomNav({ isVisible = true }: BottomNavProps) {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Search, label: "Search", path: "/search" },
+    { icon: Compass, label: "Discover", path: "/discover" },
     { icon: Plus, label: "Upload", path: "/upload", isUpload: true },
     { icon: MessageCircle, label: "Inbox", path: "/inbox", badge: unreadCount },
     { icon: User, label: "Profile", path: user ? `/profile/${user.id}` : "/auth" },
