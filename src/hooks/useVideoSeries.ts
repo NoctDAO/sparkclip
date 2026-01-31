@@ -9,7 +9,7 @@ export function useVideoSeries() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const createSeries = useCallback(async (title: string, description?: string): Promise<VideoSeries | null> => {
+  const createSeries = useCallback(async (title: string, description?: string, coverImageUrl?: string): Promise<VideoSeries | null> => {
     if (!user) {
       toast({ title: "Please sign in to create a series", variant: "destructive" });
       return null;
@@ -22,6 +22,7 @@ export function useVideoSeries() {
         user_id: user.id,
         title,
         description: description || null,
+        cover_image_url: coverImageUrl || null,
       })
       .select()
       .single();

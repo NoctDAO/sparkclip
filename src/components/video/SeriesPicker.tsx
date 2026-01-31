@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Layers, ChevronRight, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Layers, ChevronRight, X, ImagePlus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
 import { useAuth } from "@/hooks/useAuth";
 import { VideoSeries } from "@/types/video";
-
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 interface SeriesPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -18,12 +19,16 @@ interface SeriesPickerProps {
 
 export function SeriesPicker({ open, onOpenChange, selectedSeries, onSelectSeries }: SeriesPickerProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { getUserSeries, createSeries, getNextPartNumber, loading } = useVideoSeries();
+  const coverInputRef = useRef<HTMLInputElement>(null);
   
   const [userSeries, setUserSeries] = useState<VideoSeries[]>([]);
   const [showCreateNew, setShowCreateNew] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [loadingSeries, setLoadingSeries] = useState(true);
 
@@ -47,11 +52,62 @@ export function SeriesPicker({ open, onOpenChange, selectedSeries, onSelectSerie
     onOpenChange(false);
   };
 
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const clearCover = () => {
+    setCoverFile(null);
+    setCoverPreview("");
+    if (coverInputRef.current) {
+      coverInputRef.current.value = "";
+    }
+  };
+
   const handleCreateSeries = async () => {
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || !user) return;
     
     setCreating(true);
-    const series = await createSeries(newTitle.trim(), newDescription.trim() || undefined);
+
+    let coverUrl: string | undefined;
+
+    // Upload cover image if selected
+    if (coverFile) {
+      const fileExt = coverFile.name.split(".").pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("series-covers")
+        .upload(fileName, coverFile);
+
+      if (uploadError) {
+        toast({ title: "Failed to upload cover image", variant: "destructive" });
+        setCreating(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("series-covers")
+        .getPublicUrl(fileName);
+
+      coverUrl = publicUrl;
+    }
+
+    const series = await createSeries(newTitle.trim(), newDescription.trim() || undefined, coverUrl);
     setCreating(false);
 
     if (series) {
@@ -59,6 +115,8 @@ export function SeriesPicker({ open, onOpenChange, selectedSeries, onSelectSerie
       onOpenChange(false);
       setNewTitle("");
       setNewDescription("");
+      setCoverFile(null);
+      setCoverPreview("");
       setShowCreateNew(false);
     }
   };
@@ -79,6 +137,41 @@ export function SeriesPicker({ open, onOpenChange, selectedSeries, onSelectSerie
 
         {showCreateNew ? (
           <div className="space-y-4">
+            {/* Cover Image Upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cover Image (optional)</label>
+              {coverPreview ? (
+                <div className="relative aspect-video w-full max-w-[200px] rounded-lg overflow-hidden bg-secondary">
+                  <img 
+                    src={coverPreview} 
+                    alt="Cover preview" 
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={clearCover}
+                    className="absolute top-1 right-1 p-1 bg-background/80 rounded-full"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => coverInputRef.current?.click()}
+                  className="flex items-center gap-2 p-3 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+                >
+                  <ImagePlus className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Add cover image</span>
+                </button>
+              )}
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleCoverSelect}
+                className="hidden"
+              />
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Series Title</label>
               <Input
@@ -105,7 +198,10 @@ export function SeriesPicker({ open, onOpenChange, selectedSeries, onSelectSerie
             <div className="flex gap-2 pt-4">
               <Button
                 variant="outline"
-                onClick={() => setShowCreateNew(false)}
+                onClick={() => {
+                  setShowCreateNew(false);
+                  clearCover();
+                }}
                 className="flex-1"
               >
                 Back
