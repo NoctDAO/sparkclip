@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye, Lock, Ban, MoreHorizontal, Layers, Pencil } from "lucide-react";
+import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye, Lock, Ban, MoreHorizontal, Layers, Pencil, Plus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
 import { supabase } from "@/integrations/supabase/client";
 import { SeriesManager } from "@/components/video/SeriesManager";
+import { CreateSeriesSheet } from "@/components/video/CreateSeriesSheet";
 import { Profile as ProfileType, Video, VideoSeries } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +47,7 @@ export default function Profile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [managingSeries, setManagingSeries] = useState<VideoSeries | null>(null);
+  const [showCreateSeries, setShowCreateSeries] = useState(false);
 
   const isOwnProfile = user?.id === userId;
 
@@ -467,10 +469,27 @@ export default function Profile() {
 
         {/* Series tab */}
         <TabsContent value="series" className="mt-0">
+          {/* Create Series Button - only for own profile */}
+          {isOwnProfile && (
+            <div className="p-2 pb-0">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowCreateSeries(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Series
+              </Button>
+            </div>
+          )}
+          
           {userSeries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <Layers className="w-12 h-12 mb-2" />
               <p>No series yet</p>
+              {isOwnProfile && (
+                <p className="text-xs mt-1">Create a series to group your videos</p>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 p-2">
@@ -487,8 +506,12 @@ export default function Profile() {
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                        <Layers className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center overflow-hidden">
+                        {series.cover_image_url ? (
+                          <img src={series.cover_image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Layers className="w-5 h-5 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{series.title}</p>
@@ -594,6 +617,13 @@ export default function Profile() {
           onSeriesUpdated={() => fetchUserSeries()}
         />
       )}
+
+      {/* Create Series Sheet */}
+      <CreateSeriesSheet
+        open={showCreateSeries}
+        onOpenChange={setShowCreateSeries}
+        onSeriesCreated={() => fetchUserSeries()}
+      />
 
       <BottomNav />
     </div>
