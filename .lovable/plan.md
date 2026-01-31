@@ -1,123 +1,160 @@
 
-
-# Bottom Navigation Redesign
+# Premium UI Refinement
 
 ## Overview
-Transform the bottom navigation into a premium, glass-morphic nav bar with a floating upload FAB and smart active-only labels for a modern, TikTok-inspired experience.
+Redesign the video feed UI to be more premium, compact, and immersive - taking inspiration from TikTok's refined aesthetic while reducing visual clutter.
 
-## Design Direction
-- **Glass Morphism**: Heavy blur with semi-transparent background
-- **Floating FAB**: Prominent centered upload button that stands out
-- **Active-Only Labels**: Clean icon-only nav with labels appearing only on the selected tab
-- **Brand Integration**: Purple gradient accent on FAB and active states
+## Current Issues (from screenshots)
+1. **Action buttons** are too large with bulky circular backgrounds (p-3 + rounded-full + bg-secondary)
+2. **Bottom navigation** takes up too much vertical space (h-16)
+3. **Video info section** has excessive gaps and spacing
+4. **Top feed tabs** could be more minimal
+5. **Icon sizes** and padding are oversized
+
+## Changes Summary
+
+### 1. VideoActions Component - More Compact & Elegant
+**Before:** Large circular backgrounds (p-3), icons 7x7, gap-5 between items
+**After:** Smaller transparent buttons, icons 6x6, gap-4 between items
+
+Key changes:
+- Remove heavy circular backgrounds on action buttons
+- Use subtle backdrop blur instead of solid backgrounds
+- Reduce icon sizes from `w-7 h-7` to `w-6 h-6`
+- Reduce padding from `p-3` to `p-2`
+- Decrease gap between buttons from `gap-5` to `gap-4`
+- Make text smaller and lighter
+
+### 2. BottomNav - Slimmer Profile
+**Before:** Height h-16 (64px) with text labels
+**After:** Height h-14 (56px) with optional labels, smaller icons
+
+Key changes:
+- Reduce nav height from `h-16` to `h-14`
+- Reduce icon sizes from `w-6 h-6` to `w-5 h-5`
+- Make upload button more compact
+- Add subtle backdrop blur for premium feel
+- Reduce text label size
+
+### 3. FeedTabs - More Subtle Header
+**Before:** Larger text, more padding
+**After:** Slightly smaller text, backdrop blur, minimal padding
+
+Key changes:
+- Add backdrop blur for floating effect
+- Reduce vertical padding
+- Slightly smaller font size
+
+### 4. VideoInfo - Tighter Layout
+**Before:** Multiple gaps (gap-3), larger avatar, more spacing
+**After:** Reduced gaps (gap-2), smaller avatar, compact text
+
+Key changes:
+- Reduce gap between elements from `gap-3` to `gap-2`
+- Smaller avatar from `w-10 h-10` to `w-9 h-9`
+- Compact follow button
+- Tighter text spacing
+- Smaller sound info section
+
+### 5. VideoCard - Adjusted Positioning
+Position elements closer to edges to maximize video visibility:
+- Move actions closer to bottom edge
+- Reduce bottom padding for info section
 
 ## Visual Comparison
 
-**Current Design:**
+**Before:**
 ```text
-┌────────────────────────────────────────────┐
-│  🏠    🔍   ┌────────┐   💬    👤          │
-│ Home  Search│   ➕   │  Inbox Profile      │
-│             └────────┘                      │
-└────────────────────────────────────────────┘
-  Height: 56px, all labels visible, flat style
+┌────────────────────────────────────┐
+│      Following │ For You          │  <- 24px padding
+│                                    │
+│                          ┌───┐     │
+│                          │👁️ │     │  <- Large 52px buttons
+│                          │125K│    │
+│                          └───┘     │
+│                          ┌───┐     │
+│                          │❤️ │     │
+│                          │15K│     │
+│  ┌──┐                    └───┘     │
+│  │👤│ @user [Following]            │  <- 40px avatar
+│  │  │                              │
+│  └──┘                              │
+│  Caption text here...              │  <- gap-3 (12px)
+│  #hashtags                         │
+│  🎵 Sound info                     │
+├────────────────────────────────────┤
+│ 🏠    🔍    ➕    💬    👤         │  <- 64px height
+└────────────────────────────────────┘
 ```
 
-**New Design:**
+**After:**
 ```text
-┌────────────────────────────────────────────┐
-│                   ╭───╮                    │
-│                   │ ➕ │ ← Floating FAB     │
-│  🏠    🔍        ╰───╯        💬    👤    │
-│ Home                                       │
-│  ↑ Active label only                       │
-├────────────────────────────────────────────┤
-│ ▓▓▓▓▓▓▓ Glass blur background ▓▓▓▓▓▓▓     │
-└────────────────────────────────────────────┘
+┌────────────────────────────────────┐
+│      Following │ For You          │  <- 16px padding + blur
+│                                    │
+│                            👁️      │
+│                           125K     │  <- Smaller 40px buttons
+│                            ❤️      │
+│                           15.4K    │
+│                            💬      │
+│                            892     │
+│  ┌──┐ @user [Following]   🔖      │  <- 36px avatar, inline
+│  └──┘                     Save     │
+│  Caption text... #hashtags  ↗️     │  <- Compact, gap-2
+│  🎵 Sound - Artist         234     │
+├────────────────────────────────────┤
+│   🏠   🔍   ➕   💬   👤          │  <- 56px height + blur
+└────────────────────────────────────┘
 ```
 
-## Key Changes
-
-### 1. Glass Morphism Background
-- Background: `bg-background/60` (more transparent)
-- Blur: `backdrop-blur-xl` (heavier blur for premium feel)
-- Border: `border-t border-white/10` (subtle glass edge)
-- Shadow: `shadow-lg shadow-black/20` (depth from FAB)
-
-### 2. Floating Upload FAB
-- Position: Centered, elevated above the nav bar
-- Size: `w-12 h-12` rounded-full
-- Style: Purple-to-pink gradient background
-- Effect: Shadow and subtle glow
-- Animation: Scale up slightly on hover/press
-
-### 3. Active-Only Labels
-- Icons: `w-6 h-6` for better touch targets
-- Inactive: Icon only, muted color
-- Active: Icon + label below, primary/foreground color
-- Transition: Smooth fade for label appearance
-
-### 4. Nav Item Spacing
-- Remove text gap when inactive (just icon centered)
-- Add gap-0.5 when active (icon + small label)
-- Slight scale animation on active state
-
-### 5. Notification Badge
-- Keep the existing badge on Inbox
-- Adjust positioning for icon-only layout
-
-## Technical Implementation
-
-### Component Structure
-```tsx
-<nav className="fixed bottom-0 ... bg-background/60 backdrop-blur-xl border-t border-white/10">
-  {/* FAB - positioned absolutely above nav */}
-  <div className="absolute -top-6 left-1/2 -translate-x-1/2">
-    <Link to="/upload" className="w-12 h-12 bg-gradient-primary rounded-full shadow-lg">
-      <Plus className="w-6 h-6" />
-    </Link>
-  </div>
-
-  {/* Nav items with gap for FAB */}
-  <div className="flex items-center justify-around h-12">
-    {/* Home, Search, [gap], Inbox, Profile */}
-  </div>
-</nav>
-```
-
-### Active State Logic
-```tsx
-// Show label only when active
-<Link className={cn("flex flex-col items-center", isActive ? "gap-0.5" : "")}>
-  <item.icon className={cn("w-6 h-6", isActive ? "text-foreground" : "text-muted-foreground")} />
-  {isActive && <span className="text-[10px] font-medium">{item.label}</span>}
-</Link>
-```
-
-### FAB Styling
-```tsx
-<div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30 hover:scale-105 transition-transform">
-  <Plus className="w-6 h-6 text-white" />
-</div>
-```
-
-## File Changes
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/layout/BottomNav.tsx` | Complete redesign with glass morphism, floating FAB, and active-only labels |
-| `src/index.css` | Update `--bottom-nav-height` if needed |
+| `src/components/video/VideoActions.tsx` | Smaller buttons, remove backgrounds, tighter spacing |
+| `src/components/video/VideoInfo.tsx` | Smaller avatar, reduced gaps, compact layout |
+| `src/components/video/VideoCard.tsx` | Adjust positioning (bottom-20 instead of bottom-24) |
+| `src/components/layout/BottomNav.tsx` | Reduce height, smaller icons, add blur |
+| `src/components/layout/FeedTabs.tsx` | Add backdrop blur, reduce padding |
+| `src/index.css` | Add glass morphism utilities if needed |
 
-## Accessibility Considerations
-- Touch targets remain 44x44 minimum
-- Active state clearly indicated
-- FAB is prominently visible
-- Screen reader labels preserved via aria-label
+## Technical Details
+
+### VideoActions Changes
+```tsx
+// Before
+<div className="p-3 rounded-full bg-secondary/80">
+  <Eye className="w-7 h-7 text-foreground" />
+</div>
+
+// After
+<div className="p-2 rounded-full backdrop-blur-sm">
+  <Eye className="w-6 h-6 text-foreground drop-shadow-md" />
+</div>
+```
+
+### BottomNav Changes
+```tsx
+// Before
+<nav className="fixed bottom-0 ... bg-background border-t border-border">
+  <div className="flex items-center justify-around h-16">
+
+// After
+<nav className="fixed bottom-0 ... bg-background/80 backdrop-blur-md border-t border-border/50">
+  <div className="flex items-center justify-around h-14">
+```
+
+### FeedTabs Changes
+```tsx
+// Before
+<div className="fixed top-0 ... pt-4 pb-2">
+
+// After
+<div className="fixed top-0 ... pt-3 pb-1.5 bg-gradient-to-b from-background/80 to-transparent backdrop-blur-sm">
+```
 
 ## Summary
-- **Premium glass-morphic aesthetic** with heavy blur
-- **Floating FAB** makes upload action prominent
-- **Cleaner layout** with icon-only inactive states
-- **Smart labels** appear only when needed
-- **Brand consistency** with purple gradient on FAB
-
+- **~15% vertical space saved** on navigation elements
+- **Cleaner, more premium aesthetic** with glass morphism effects
+- **Better video visibility** with reduced overlay clutter
+- **Consistent with modern app design** trends (blur, transparency, compact)
