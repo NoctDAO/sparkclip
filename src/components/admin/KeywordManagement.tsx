@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Search, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Trash2, Search, AlertTriangle, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,13 @@ interface Keyword {
   created_at: string;
 }
 
+interface ImportKeyword {
+  keyword: string;
+  category: string;
+  action: string;
+  is_regex?: boolean;
+}
+
 const CATEGORIES = [
   { value: "hate_speech", label: "Hate Speech" },
   { value: "harassment", label: "Harassment" },
@@ -36,13 +43,18 @@ const ACTIONS = [
   { value: "block", label: "Block Immediately" },
 ];
 
+const VALID_CATEGORIES = CATEGORIES.map(c => c.value);
+const VALID_ACTIONS = ACTIONS.map(a => a.value);
+
 export function KeywordManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
   
   // New keyword form state
   const [newKeyword, setNewKeyword] = useState("");
@@ -130,6 +142,112 @@ export function KeywordManagement() {
     }
   };
 
+  const handleExport = () => {
+    const exportData = keywords.map(({ keyword, category, action, is_regex }) => ({
+      keyword,
+      category,
+      action,
+      is_regex,
+    }));
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `keywords-blocklist-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({ title: `Exported ${keywords.length} keywords` });
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      let importData: ImportKeyword[];
+
+      // Try JSON first
+      try {
+        importData = JSON.parse(text);
+      } catch {
+        // Try CSV format: keyword,category,action,is_regex
+        const lines = text.split("\n").filter(line => line.trim());
+        const hasHeader = lines[0]?.toLowerCase().includes("keyword");
+        const dataLines = hasHeader ? lines.slice(1) : lines;
+        
+        importData = dataLines.map(line => {
+          const [keyword, category = "spam", action = "flag", is_regex = "false"] = line.split(",").map(s => s.trim());
+          return {
+            keyword,
+            category: VALID_CATEGORIES.includes(category) ? category : "spam",
+            action: VALID_ACTIONS.includes(action) ? action : "flag",
+            is_regex: is_regex === "true",
+          };
+        }).filter(k => k.keyword);
+      }
+
+      if (!Array.isArray(importData) || importData.length === 0) {
+        throw new Error("Invalid file format");
+      }
+
+      // Validate and normalize data
+      const validKeywords = importData.filter(k => 
+        typeof k.keyword === "string" && k.keyword.trim()
+      ).map(k => ({
+        keyword: k.keyword.trim(),
+        category: VALID_CATEGORIES.includes(k.category) ? k.category : "spam",
+        action: VALID_ACTIONS.includes(k.action) ? k.action : "flag",
+        is_regex: Boolean(k.is_regex),
+        created_by: user.id,
+      }));
+
+      if (validKeywords.length === 0) {
+        throw new Error("No valid keywords found in file");
+      }
+
+      // Check for duplicates with existing keywords
+      const existingSet = new Set(keywords.map(k => k.keyword.toLowerCase()));
+      const newKeywords = validKeywords.filter(k => !existingSet.has(k.keyword.toLowerCase()));
+
+      if (newKeywords.length === 0) {
+        toast({
+          title: "No new keywords",
+          description: "All keywords in the file already exist",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("moderation_keywords")
+        .insert(newKeywords as any);
+
+      if (error) throw error;
+
+      toast({
+        title: "Import successful",
+        description: `Added ${newKeywords.length} new keywords (${validKeywords.length - newKeywords.length} duplicates skipped)`,
+      });
+      fetchKeywords();
+    } catch (error: any) {
+      toast({
+        title: "Import failed",
+        description: error.message || "Invalid file format. Use JSON or CSV.",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const filteredKeywords = keywords.filter(k =>
     k.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
     k.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -175,14 +293,40 @@ export function KeywordManagement() {
                 Manage words and patterns that trigger automatic moderation
               </CardDescription>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Keyword
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImport}
+                accept=".json,.csv,.txt"
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {importing ? "Importing..." : "Import"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={keywords.length === 0}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add Blocked Keyword</DialogTitle>
                   <DialogDescription>
@@ -251,11 +395,15 @@ export function KeywordManagement() {
                     {saving ? "Adding..." : "Add Keyword"}
                   </Button>
                 </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
+          <p className="text-xs text-muted-foreground mb-4">
+            Import/Export formats: JSON array or CSV (keyword,category,action,is_regex)
+          </p>
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
