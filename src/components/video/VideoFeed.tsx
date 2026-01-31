@@ -30,8 +30,7 @@ export function VideoFeed({
     following: Set<string>;
   }>({ likes: new Set(), bookmarks: new Set(), following: new Set() });
   
-  // Get blocked user IDs for filtering
-  const blockedUserIds = new Set(blockedUsers.map(b => b.blocked_user_id));
+  const blockedUserIds = blockedUsers.map(b => b.blocked_user_id);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const lastTouchY = useRef(0);
@@ -39,17 +38,6 @@ export function VideoFeed({
   const fetchVideos = useCallback(async () => {
     setLoading(true);
     
-    let userIds: string[] = [];
-    
-    if (feedType === "following" && user) {
-      const { data: followingData } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", user.id);
-
-      userIds = followingData?.map((f) => f.following_id) || [];
-    }
-
     // If we have an initialVideoId, fetch it first
     let initialVideo: Video | null = null;
     if (initialVideoId) {
@@ -98,9 +86,117 @@ export function VideoFeed({
       }
     }
 
+    try {
+      // Use the optimized database function for feed videos
+      const { data, error } = await supabase.rpc("get_feed_videos", {
+        p_user_id: user?.id || null,
+        p_feed_type: feedType,
+        p_limit: 20,
+        p_offset: 0,
+        p_blocked_user_ids: blockedUserIds,
+      });
+
+      if (error) throw error;
+
+      // Transform the flat result into Video objects with user interactions
+      let videosWithData: Video[] = (data || []).map((v: any) => ({
+        id: v.id,
+        user_id: v.user_id,
+        video_url: v.video_url,
+        thumbnail_url: v.thumbnail_url,
+        caption: v.caption,
+        hashtags: v.hashtags,
+        likes_count: v.likes_count,
+        comments_count: v.comments_count,
+        shares_count: v.shares_count,
+        views_count: v.views_count,
+        sound_id: v.sound_id,
+        series_id: v.series_id,
+        series_order: v.series_order,
+        duet_source_id: v.duet_source_id,
+        duet_layout: v.duet_layout,
+        allow_duets: v.allow_duets,
+        created_at: v.created_at,
+        profiles: v.profile_username ? {
+          username: v.profile_username,
+          display_name: v.profile_display_name,
+          avatar_url: v.profile_avatar_url,
+        } : null,
+        sound: v.sound_title ? {
+          id: v.sound_id,
+          title: v.sound_title,
+          artist: v.sound_artist,
+          audio_url: v.sound_audio_url,
+          cover_url: v.sound_cover_url,
+          duration_seconds: null,
+          uses_count: 0,
+          is_original: false,
+          original_video_id: null,
+          created_by: null,
+          created_at: v.created_at,
+        } : null,
+        series: v.series_title ? {
+          id: v.series_id,
+          user_id: v.user_id,
+          title: v.series_title,
+          description: v.series_description,
+          cover_video_id: null,
+          cover_image_url: null,
+          videos_count: v.series_videos_count,
+          total_views: 0,
+          created_at: v.created_at,
+          updated_at: v.created_at,
+        } : null,
+      }));
+
+      // Update user interactions from the response
+      if (user) {
+        const likes = new Set<string>();
+        const bookmarks = new Set<string>();
+        const following = new Set<string>();
+        
+        data?.forEach((v: any) => {
+          if (v.is_liked) likes.add(v.id);
+          if (v.is_bookmarked) bookmarks.add(v.id);
+          if (v.is_following) following.add(v.user_id);
+        });
+        
+        setUserInteractions({ likes, bookmarks, following });
+      }
+      
+      // If we have an initial video, put it first and remove any duplicate
+      if (initialVideo) {
+        videosWithData = videosWithData.filter(v => v.id !== initialVideo!.id);
+        videosWithData = [initialVideo, ...videosWithData];
+      }
+      
+      setVideos(videosWithData);
+    } catch (error) {
+      console.error("Error fetching videos with optimized query, falling back:", error);
+      // Fallback to old query pattern if the function fails
+      await fetchVideosFallback(initialVideo);
+    }
+    
+    setLoading(false);
+  }, [feedType, user, blockedUserIds.length, initialVideoId]);
+
+  // Fallback function using the old query pattern
+  const fetchVideosFallback = async (initialVideo: Video | null) => {
+    let userIds: string[] = [];
+    
+    if (feedType === "following" && user) {
+      const { data: followingData } = await supabase
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user.id);
+
+      userIds = followingData?.map((f) => f.following_id) || [];
+    }
+
     let query = supabase
       .from("videos")
       .select("*")
+      .eq("visibility", "public")
       .order("created_at", { ascending: false })
       .limit(20);
 
@@ -111,7 +207,6 @@ export function VideoFeed({
     const { data, error } = await query;
 
     if (!error && data) {
-      // Fetch profiles separately
       const videoUserIds = [...new Set(data.map(v => v.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -120,7 +215,6 @@ export function VideoFeed({
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
       
-      // Fetch sounds for videos that have sound_id
       const soundIds = [...new Set(data.filter(v => v.sound_id).map(v => v.sound_id))];
       let soundMap = new Map();
       
@@ -133,7 +227,6 @@ export function VideoFeed({
         soundMap = new Map(sounds?.map(s => [s.id, s]) || []);
       }
       
-      // Fetch series for videos that have series_id
       const seriesIds = [...new Set(data.filter(v => v.series_id).map(v => v.series_id))];
       let seriesMap = new Map();
       
@@ -147,7 +240,7 @@ export function VideoFeed({
       }
       
       let videosWithData = data
-        .filter(video => !blockedUserIds.has(video.user_id)) // Filter out blocked users
+        .filter(video => !blockedUserIds.includes(video.user_id))
         .map(video => ({
           ...video,
           profiles: profileMap.get(video.user_id) || null,
@@ -155,17 +248,14 @@ export function VideoFeed({
           series: video.series_id ? seriesMap.get(video.series_id) || null : null,
         })) as Video[];
       
-      // If we have an initial video, put it first and remove any duplicate
       if (initialVideo) {
-        videosWithData = videosWithData.filter(v => v.id !== initialVideo!.id);
+        videosWithData = videosWithData.filter(v => v.id !== initialVideo.id);
         videosWithData = [initialVideo, ...videosWithData];
       }
       
       setVideos(videosWithData);
     }
-    
-    setLoading(false);
-  }, [feedType, user, blockedUserIds.size, initialVideoId]);
+  };
 
   const fetchUserInteractions = useCallback(async () => {
     if (!user) return;
@@ -185,30 +275,30 @@ export function VideoFeed({
 
   useEffect(() => {
     fetchVideos();
-    fetchUserInteractions();
-  }, [fetchVideos, fetchUserInteractions]);
+    // Only fetch user interactions separately if not using optimized query
+    // The optimized query returns interaction flags directly
+    if (!user) {
+      fetchUserInteractions();
+    }
+  }, [fetchVideos]);
 
   // Handle in-feed series navigation
   const handleSeriesNavigation = useCallback((newVideo: Video) => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Check if video already exists in feed
     const existingIndex = videos.findIndex(v => v.id === newVideo.id);
     
     if (existingIndex !== -1) {
-      // Video exists, just scroll to it
       const targetScrollTop = existingIndex * container.clientHeight;
       container.scrollTo({ top: targetScrollTop, behavior: "smooth" });
       setCurrentIndex(existingIndex);
     } else {
-      // Insert new video after current position
       const insertIndex = currentIndex + 1;
       const newVideos = [...videos];
       newVideos.splice(insertIndex, 0, newVideo);
       setVideos(newVideos);
       
-      // Wait for DOM update, then scroll
       requestAnimationFrame(() => {
         const targetScrollTop = insertIndex * container.clientHeight;
         container.scrollTo({ top: targetScrollTop, behavior: "smooth" });
@@ -229,7 +319,6 @@ export function VideoFeed({
       setCurrentIndex(newIndex);
     }
 
-    // Detect scroll direction
     if (onScrollDirectionChange) {
       const isScrollingUp = scrollTop < lastScrollTop.current;
       onScrollDirectionChange(isScrollingUp);
@@ -247,10 +336,7 @@ export function VideoFeed({
     const currentY = e.touches[0].clientY;
     const diff = lastTouchY.current - currentY;
     
-    // Threshold to avoid micro-movements
     if (Math.abs(diff) > 20) {
-      // Swiping up (scrolling down content) = hide bars
-      // Swiping down (scrolling up content) = show bars
       onScrollDirectionChange(diff < 0);
       lastTouchY.current = currentY;
     }

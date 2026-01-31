@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Notification } from "@/types/video";
+
+// Debounce realtime updates to prevent rapid re-fetches
+const DEBOUNCE_MS = 1000;
 
 export function useNotifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchRef = useRef<number>(0);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
@@ -17,110 +22,151 @@ export function useNotifications() {
       return;
     }
 
+    // Prevent fetching more than once per second
+    const now = Date.now();
+    if (now - lastFetchRef.current < 1000) {
+      return;
+    }
+    lastFetchRef.current = now;
+
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    try {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-    if (!error && data) {
-      // Fetch actor profiles
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        setNotifications([]);
+        setUnreadCount(0);
+        setLoading(false);
+        return;
+      }
+
+      // Batch fetch related data
       const actorIds = [...new Set(data.map((n) => n.actor_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, username, display_name, avatar_url")
-        .in("user_id", actorIds);
-
-      const profileMap = new Map<string, { user_id: string; username: string | null; display_name: string | null; avatar_url: string | null }>();
-      profiles?.forEach((p) => profileMap.set(p.user_id, p));
-
-      // Fetch video thumbnails and series info
       const videoIds = [...new Set(data.filter((n) => n.video_id).map((n) => n.video_id!))];
-      let videoMap = new Map<string, { id: string; thumbnail_url: string | null; series_id?: string | null; series?: { id: string; title: string } | null }>();
-      if (videoIds.length > 0) {
-        const { data: videos } = await supabase
-          .from("videos")
-          .select("id, thumbnail_url, series_id")
-          .in("id", videoIds);
-        
-        // Fetch series info for videos that belong to series
-        const seriesIds = [...new Set(videos?.filter((v) => v.series_id).map((v) => v.series_id!) || [])];
-        let seriesMap = new Map<string, { id: string; title: string }>();
-        if (seriesIds.length > 0) {
-          const { data: seriesData } = await supabase
-            .from("video_series")
-            .select("id, title")
-            .in("id", seriesIds);
-          seriesData?.forEach((s) => seriesMap.set(s.id, s));
-        }
-        
-        videos?.forEach((v) => videoMap.set(v.id, {
-          ...v,
-          series: v.series_id ? seriesMap.get(v.series_id) || null : null,
-        }));
-      }
-
-      // Fetch comment content for comment-related notifications
       const commentIds = [...new Set(data.filter((n) => n.comment_id).map((n) => n.comment_id!))];
-      let commentMap = new Map<string, { id: string; content: string }>();
-      if (commentIds.length > 0) {
-        const { data: comments } = await supabase
-          .from("comments")
-          .select("id, content")
-          .in("id", commentIds);
-        comments?.forEach((c) => commentMap.set(c.id, c));
+
+      // Parallel fetch all related data
+      const [profilesRes, videosRes, commentsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("user_id, username, display_name, avatar_url")
+          .in("user_id", actorIds),
+        videoIds.length > 0
+          ? supabase
+              .from("videos")
+              .select("id, thumbnail_url, series_id")
+              .in("id", videoIds)
+          : Promise.resolve({ data: [] }),
+        commentIds.length > 0
+          ? supabase
+              .from("comments")
+              .select("id, content")
+              .in("id", commentIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      // Build lookup maps
+      const profileMap = new Map(
+        profilesRes.data?.map((p) => [p.user_id, p]) || []
+      );
+      const videoMap = new Map(
+        (videosRes.data || []).map((v) => [v.id, v])
+      );
+      const commentMap = new Map(
+        (commentsRes.data || []).map((c) => [c.id, c])
+      );
+
+      // Fetch series info for videos that have series_id
+      const seriesIds = [...new Set(
+        (videosRes.data || [])
+          .filter((v) => v.series_id)
+          .map((v) => v.series_id!)
+      )];
+      
+      let seriesMap = new Map<string, { id: string; title: string }>();
+      if (seriesIds.length > 0) {
+        const { data: seriesData } = await supabase
+          .from("video_series")
+          .select("id, title")
+          .in("id", seriesIds);
+        seriesData?.forEach((s) => seriesMap.set(s.id, s));
       }
 
-      const notificationsWithDetails: Notification[] = data.map((notification) => ({
-        id: notification.id,
-        user_id: notification.user_id,
-        actor_id: notification.actor_id,
-        type: notification.type as Notification["type"],
-        video_id: notification.video_id,
-        comment_id: notification.comment_id,
-        is_read: notification.is_read,
-        created_at: notification.created_at,
-        actor: profileMap.get(notification.actor_id),
-        video: notification.video_id ? videoMap.get(notification.video_id) : undefined,
-        comment: notification.comment_id ? commentMap.get(notification.comment_id) : undefined,
-      }));
+      // Build final notifications with all related data
+      const notificationsWithDetails: Notification[] = data.map((notification) => {
+        const video = notification.video_id ? videoMap.get(notification.video_id) : undefined;
+        
+        return {
+          id: notification.id,
+          user_id: notification.user_id,
+          actor_id: notification.actor_id,
+          type: notification.type as Notification["type"],
+          video_id: notification.video_id,
+          comment_id: notification.comment_id,
+          is_read: notification.is_read,
+          created_at: notification.created_at,
+          actor: profileMap.get(notification.actor_id),
+          video: video ? {
+            ...video,
+            series: video.series_id ? seriesMap.get(video.series_id) || null : null,
+          } : undefined,
+          comment: notification.comment_id ? commentMap.get(notification.comment_id) : undefined,
+        };
+      });
 
       setNotifications(notificationsWithDetails);
       setUnreadCount(data.filter((n) => !n.is_read).length);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [user]);
+
+  const debouncedFetch = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      fetchNotifications();
+    }, DEBOUNCE_MS);
+  }, [fetchNotifications]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!user) return;
+
+    // Optimistic update
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
 
     await supabase
       .from("notifications")
       .update({ is_read: true })
       .eq("id", notificationId)
       .eq("user_id", user.id);
-
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
   }, [user]);
 
   const markAllAsRead = useCallback(async () => {
     if (!user) return;
+
+    // Optimistic update
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
 
     await supabase
       .from("notifications")
       .update({ is_read: true })
       .eq("user_id", user.id)
       .eq("is_read", false);
-
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
   }, [user]);
 
   const createNotification = useCallback(
@@ -143,16 +189,17 @@ export function useNotifications() {
     [user]
   );
 
+  // Initial fetch
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Real-time subscription for new notifications
+  // Realtime subscription with debouncing
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel("notifications")
+      .channel(`notifications-${user.id}`)
       .on(
         "postgres_changes",
         {
@@ -162,15 +209,19 @@ export function useNotifications() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchNotifications();
+          // Debounce realtime updates to prevent rapid re-fetches
+          debouncedFetch();
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
       supabase.removeChannel(channel);
     };
-  }, [user, fetchNotifications]);
+  }, [user, debouncedFetch]);
 
   return {
     notifications,

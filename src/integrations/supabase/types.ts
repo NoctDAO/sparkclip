@@ -777,6 +777,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_recommendations: {
+        Row: {
+          affinity_creators: string[] | null
+          affinity_hashtags: string[] | null
+          computed_at: string
+          expires_at: string
+          id: string
+          user_id: string
+          video_ids: string[]
+        }
+        Insert: {
+          affinity_creators?: string[] | null
+          affinity_hashtags?: string[] | null
+          computed_at?: string
+          expires_at?: string
+          id?: string
+          user_id: string
+          video_ids?: string[]
+        }
+        Update: {
+          affinity_creators?: string[] | null
+          affinity_hashtags?: string[] | null
+          computed_at?: string
+          expires_at?: string
+          id?: string
+          user_id?: string
+          video_ids?: string[]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string
@@ -1000,6 +1030,48 @@ export type Database = {
       }
     }
     Functions: {
+      get_feed_videos: {
+        Args: {
+          p_blocked_user_ids?: string[]
+          p_feed_type?: string
+          p_limit?: number
+          p_offset?: number
+          p_user_id?: string
+        }
+        Returns: {
+          allow_duets: boolean
+          caption: string
+          comments_count: number
+          created_at: string
+          duet_layout: string
+          duet_source_id: string
+          hashtags: string[]
+          id: string
+          is_bookmarked: boolean
+          is_following: boolean
+          is_liked: boolean
+          likes_count: number
+          profile_avatar_url: string
+          profile_display_name: string
+          profile_username: string
+          series_description: string
+          series_id: string
+          series_order: number
+          series_title: string
+          series_videos_count: number
+          shares_count: number
+          sound_artist: string
+          sound_audio_url: string
+          sound_cover_url: string
+          sound_id: string
+          sound_title: string
+          thumbnail_url: string
+          user_id: string
+          video_url: string
+          views_count: number
+          visibility: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1008,6 +1080,7 @@ export type Database = {
         Returns: boolean
       }
       increment_view_count: { Args: { video_id: string }; Returns: undefined }
+      refresh_trending_cache: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "verified"
