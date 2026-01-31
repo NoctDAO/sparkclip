@@ -10,9 +10,10 @@ interface VideoPlayerProps {
   videoId?: string;
   className?: string;
   bottomNavVisible?: boolean;
+  onVideoEnd?: () => void;
 }
 
-export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true }: VideoPlayerProps) {
+export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true, onVideoEnd }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isMuted, toggleMute, volume } = useVideoSound();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -60,12 +61,19 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
       }
     };
 
+    const handleEnded = () => {
+      if (onVideoEnd) {
+        onVideoEnd();
+      }
+    };
+
     video.addEventListener("waiting", handleWaiting);
     video.addEventListener("playing", handlePlaying);
     video.addEventListener("canplay", handleCanPlay);
     video.addEventListener("seeking", handleSeeking);
     video.addEventListener("seeked", handleSeeked);
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("ended", handleEnded);
 
     // Check if metadata is already loaded
     if (video.videoWidth > 0) {
@@ -79,8 +87,9 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
       video.removeEventListener("seeking", handleSeeking);
       video.removeEventListener("seeked", handleSeeked);
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [onVideoEnd]);
 
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
@@ -140,7 +149,7 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
           "w-full h-full",
           isLandscape ? "object-contain" : "object-cover"
         )}
-        loop
+        loop={!onVideoEnd}
         muted={isMuted}
         playsInline
         preload="metadata"

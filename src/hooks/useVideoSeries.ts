@@ -212,6 +212,23 @@ export function useVideoSeries() {
     return (data?.[0]?.series_order || 0) + 1;
   }, []);
 
+  const getNextVideoInSeries = useCallback(async (seriesId: string, currentOrder: number): Promise<Video | null> => {
+    const { data, error } = await supabase
+      .from("videos")
+      .select("*")
+      .eq("series_id", seriesId)
+      .gt("series_order", currentOrder)
+      .order("series_order", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data as Video;
+  }, []);
+
   return {
     loading,
     createSeries,
@@ -224,5 +241,6 @@ export function useVideoSeries() {
     updateSeries,
     deleteSeries,
     getNextPartNumber,
+    getNextVideoInSeries,
   };
 }
