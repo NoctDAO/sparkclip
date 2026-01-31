@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Volume2, VolumeX, Play, Loader2 } from "lucide-react";
+import { Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVideoAnalytics } from "@/hooks/useVideoAnalytics";
-import { useVideoSound } from "@/contexts/VideoSoundContext";
 
 interface VideoPlayerProps {
   src: string;
@@ -15,7 +14,6 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true, onVideoEnd }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { isMuted, toggleMute, volume } = useVideoSound();
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
@@ -120,11 +118,6 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
     }
   };
 
-  const handleMuteToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleMute();
-  };
-
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     const video = videoRef.current;
@@ -150,7 +143,6 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
           isLandscape ? "object-contain" : "object-cover"
         )}
         loop={!onVideoEnd}
-        muted={isMuted}
         playsInline
         preload="metadata"
       />
@@ -169,27 +161,6 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
         </div>
       )}
       
-      {/* Mute toggle - positioned safely inside viewport */}
-      <button
-        onClick={handleMuteToggle}
-        className={cn(
-          "absolute p-2 rounded-full transition-all z-10",
-          isMuted 
-            ? "bg-primary/90 opacity-100 animate-pulse" 
-            : "bg-background/50 backdrop-blur-sm",
-          !isMuted && !showControls && isPlaying && "opacity-0"
-        )}
-        style={{
-          top: "calc(var(--safe-top) + 3.5rem)",
-          right: "calc(var(--safe-right) + 0.75rem)",
-        }}
-      >
-        {isMuted ? (
-          <VolumeX className="w-5 h-5 text-primary-foreground" />
-        ) : (
-          <Volume2 className="w-5 h-5 text-foreground" />
-        )}
-      </button>
 
       {/* Progress bar - always visible */}
       <div 
