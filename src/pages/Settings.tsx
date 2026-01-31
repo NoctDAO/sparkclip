@@ -51,7 +51,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-[var(--app-height)] bg-background text-foreground">
       {/* Header */}
       <header className="flex items-center p-4 border-b border-border">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2">

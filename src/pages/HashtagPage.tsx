@@ -97,7 +97,7 @@ export default function HashtagPage() {
         <link rel="canonical" href={pageUrl} />
       </Helmet>
 
-      <div className="min-h-screen bg-background text-foreground pb-safe-nav">
+      <div className="min-h-[var(--app-height)] bg-background text-foreground pb-safe-nav">
         {/* Header */}
         <div className="sticky top-0 z-40 bg-background border-b border-border">
           <div className="flex items-center gap-3 p-4">

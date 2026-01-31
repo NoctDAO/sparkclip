@@ -87,7 +87,7 @@ export default function Sounds() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-safe-nav">
+    <div className="min-h-[var(--app-height)] bg-background pb-safe-nav">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex items-center gap-4 p-4">

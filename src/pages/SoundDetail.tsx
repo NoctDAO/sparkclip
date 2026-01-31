@@ -131,7 +131,7 @@ export default function SoundDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-background flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -215,7 +215,7 @@ export default function SoundDetail() {
         </script>
       </Helmet>
 
-    <div className="min-h-screen bg-background pb-safe-nav">
+    <div className="min-h-[var(--app-height)] bg-background pb-safe-nav">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border p-4">
         <button onClick={() => navigate(-1)} className="p-1">

@@ -46,7 +46,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-[var(--app-height)] bg-background text-foreground flex flex-col">
       {/* Header */}
       <header className="flex items-center p-4">
         <button onClick={() => navigate(-1)} className="p-2">
