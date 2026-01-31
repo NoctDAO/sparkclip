@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
+import { useRateLimit } from "@/hooks/useRateLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Comment } from "@/types/video";
@@ -20,6 +21,7 @@ interface CommentsSheetProps {
 export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { checkRateLimit: checkCommentLimit } = useRateLimit("comment");
   const { createNotification } = useNotifications();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -150,6 +152,8 @@ export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProp
     }
 
     if (!newComment.trim()) return;
+
+    if (!checkCommentLimit()) return;
 
     setLoading(true);
 

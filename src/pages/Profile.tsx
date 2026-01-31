@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useRateLimit } from "@/hooks/useRateLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile as ProfileType, Video } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ export default function Profile() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const { isVerified } = useUserRoles(userId);
+  const { checkRateLimit: checkFollowLimit } = useRateLimit("follow");
   
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -117,6 +119,7 @@ export default function Profile() {
       return;
     }
 
+    if (!checkFollowLimit()) return;
     if (isFollowing) {
       await supabase
         .from("follows")
