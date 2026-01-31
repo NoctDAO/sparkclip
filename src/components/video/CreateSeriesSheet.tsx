@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Layers, Check, Loader2 } from "lucide-react";
+import { Layers, Check, Loader2, ImagePlus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
@@ -29,11 +29,14 @@ export function CreateSeriesSheet({
   const { user } = useAuth();
   const { toast } = useToast();
   const { createSeries, addToSeries } = useVideoSeries();
+  const coverInputRef = useRef<HTMLInputElement>(null);
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -53,8 +56,36 @@ export function CreateSeriesSheet({
       setTitle("");
       setDescription("");
       setSelectedVideoIds(new Set());
+      setCoverFile(null);
+      setCoverPreview("");
     }
   }, [open]);
+
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const clearCover = () => {
+    setCoverFile(null);
+    setCoverPreview("");
+    if (coverInputRef.current) {
+      coverInputRef.current.value = "";
+    }
+  };
 
   const loadUserVideos = async () => {
     if (!user) return;
@@ -101,8 +132,32 @@ export function CreateSeriesSheet({
 
     setCreating(true);
 
+    let coverUrl: string | undefined;
+
+    // Upload cover image if selected
+    if (coverFile && user) {
+      const fileExt = coverFile.name.split(".").pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("series-covers")
+        .upload(fileName, coverFile);
+
+      if (uploadError) {
+        toast({ title: "Failed to upload cover image", variant: "destructive" });
+        setCreating(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("series-covers")
+        .getPublicUrl(fileName);
+
+      coverUrl = publicUrl;
+    }
+
     // Create the series
-    const series = await createSeries(title.trim(), description.trim() || undefined);
+    const series = await createSeries(title.trim(), description.trim() || undefined, coverUrl);
     
     if (!series) {
       setCreating(false);
@@ -158,19 +213,54 @@ export function CreateSeriesSheet({
         <div className="flex flex-col h-[calc(85vh-140px)] gap-4">
           {/* Series Details */}
           <div className="space-y-3">
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Series title"
-              className="font-medium"
-            />
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a description (optional)"
-              className="text-sm resize-none"
-              rows={2}
-            />
+            {/* Cover Image Upload */}
+            <div className="flex items-start gap-3">
+              {coverPreview ? (
+                <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+                  <img 
+                    src={coverPreview} 
+                    alt="Cover preview" 
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={clearCover}
+                    className="absolute top-0.5 right-0.5 p-0.5 bg-background/80 rounded-full"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => coverInputRef.current?.click()}
+                  className="w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center gap-1 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+                >
+                  <ImagePlus className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Cover</span>
+                </button>
+              )}
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleCoverSelect}
+                className="hidden"
+              />
+              <div className="flex-1 space-y-2">
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Series title"
+                  className="font-medium"
+                />
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add a description (optional)"
+                  className="text-sm resize-none"
+                  rows={2}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Video Selection */}
