@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Eye } from "lucide-react";
+import { VideoThumbnail } from "@/components/video/VideoThumbnail";
 import { Video } from "@/types/video";
 
 interface VideoResultsProps {
@@ -24,29 +25,22 @@ export function VideoResults({ videos }: VideoResultsProps) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-1 p-1">
-      {videos.map((video) => (
+    <div className="grid grid-cols-3 gap-0.5 p-1">
+      {videos.map((video, index) => (
         <div
           key={video.id}
-          className="aspect-[9/16] bg-secondary cursor-pointer overflow-hidden rounded-sm relative group"
-          onClick={() => navigate(`/?video=${video.id}`)}
+          className="relative grid-item-hover"
         >
-          {video.thumbnail_url ? (
-            <img
-              src={video.thumbnail_url}
-              alt={video.caption || "Video thumbnail"}
-              className="w-full h-full object-cover transition-transform group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <video
-              src={video.video_url}
-              className="w-full h-full object-cover"
-              muted
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+          <VideoThumbnail
+            thumbnailUrl={video.thumbnail_url}
+            videoUrl={video.video_url}
+            alt={video.caption || "Video thumbnail"}
+            onClick={() => navigate(`/?video=${video.id}`)}
+            className="rounded-sm"
+            priority={index < 6}
+          />
+          {/* View count overlay */}
+          <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg pointer-events-none">
             <Eye className="w-3 h-3" />
             <span>{formatCount(video.views_count)}</span>
           </div>

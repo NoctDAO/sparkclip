@@ -10,9 +10,10 @@ interface VideoPlayerProps {
   className?: string;
   bottomNavVisible?: boolean;
   onVideoEnd?: () => void;
+  posterUrl?: string;
 }
 
-export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true, onVideoEnd }: VideoPlayerProps) {
+export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true, onVideoEnd, posterUrl }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -168,8 +169,9 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
       <video
         ref={videoRef}
         src={src}
+        poster={posterUrl}
         className={cn(
-          "w-full h-full",
+          "w-full h-full transition-opacity duration-200",
           isLandscape ? "object-contain" : "object-cover"
         )}
         loop={!onVideoEnd}
@@ -177,10 +179,12 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
         preload="metadata"
       />
 
-      {/* Buffering spinner */}
+      {/* Buffering spinner with backdrop blur */}
       {isBuffering && isActive && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/40 pointer-events-none">
-          <Loader2 className="w-12 h-12 text-foreground animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-sm pointer-events-none transition-opacity duration-200">
+          <div className="p-4 rounded-full bg-background/60 backdrop-blur-md">
+            <Loader2 className="w-10 h-10 text-foreground animate-spin" />
+          </div>
         </div>
       )}
       

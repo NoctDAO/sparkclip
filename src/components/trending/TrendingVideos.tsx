@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, Eye, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { VideoThumbnail } from "@/components/video/VideoThumbnail";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Video } from "@/types/video";
 
 export function TrendingVideos() {
@@ -48,9 +50,9 @@ export function TrendingVideos() {
             <h2 className="font-bold text-lg">Trending Videos</h2>
           </div>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="w-32 aspect-[9/16] bg-secondary rounded-lg animate-pulse shrink-0" />
+            <Skeleton key={i} className="w-28 aspect-[9/16] rounded-lg shrink-0" shimmer />
           ))}
         </div>
       </div>
@@ -75,35 +77,29 @@ export function TrendingVideos() {
           See all <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide scroll-fade-edges">
         {videos.map((video, index) => (
           <div
             key={video.id}
-            onClick={() => navigate(`/?video=${video.id}`)}
-            className="relative w-32 aspect-[9/16] bg-secondary rounded-lg overflow-hidden cursor-pointer shrink-0 group"
+            className="relative w-28 shrink-0 grid-item-hover"
           >
-            {video.thumbnail_url ? (
-              <img
-                src={video.thumbnail_url}
-                alt={video.caption || "Video thumbnail"}
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                loading="lazy"
-              />
-            ) : (
-              <video
-                src={video.video_url}
-                className="w-full h-full object-cover"
-                muted
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            <VideoThumbnail
+              thumbnailUrl={video.thumbnail_url}
+              videoUrl={video.video_url}
+              alt={video.caption || "Trending video"}
+              onClick={() => navigate(`/?video=${video.id}`)}
+              className="rounded-lg"
+              priority={index < 4}
+            />
+            {/* Rank badge for top 3 */}
             {index < 3 && (
-              <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded">
+              <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded z-10">
                 #{index + 1}
               </div>
             )}
-            <div className="absolute bottom-2 left-2 right-2">
-              <div className="flex items-center gap-1 text-white text-xs font-semibold">
+            {/* View count overlay */}
+            <div className="absolute bottom-2 left-2 right-2 pointer-events-none">
+              <div className="flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
                 <Eye className="w-3 h-3" />
                 <span>{formatCount(video.views_count)}</span>
               </div>
