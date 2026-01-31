@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, MessageSquare, Heart, UserPlus, AtSign, Check, Layers } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Bell, MessageSquare, Heart, UserPlus, AtSign, Check, Layers, Mail } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -187,19 +187,22 @@ export default function Inbox() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <h1 className="font-bold text-lg">Inbox</h1>
-        {unreadCount > 0 ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={markAllAsRead}
-            className="text-primary hover:text-primary/80"
-          >
-            <Check className="w-4 h-4 mr-1" />
-            Read all
-          </Button>
-        ) : (
-          <div className="w-10" />
-        )}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={markAllAsRead}
+              className="text-primary hover:text-primary/80"
+            >
+              <Check className="w-4 h-4 mr-1" />
+              Read all
+            </Button>
+          )}
+          <Link to="/messages" className="p-2">
+            <Mail className="w-6 h-6" />
+          </Link>
+        </div>
       </header>
 
       {/* Tabs */}
