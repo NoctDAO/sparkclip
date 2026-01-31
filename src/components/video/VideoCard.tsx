@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ChevronLeft, ChevronRight, SkipForward } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, SkipForward, Loader2 } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoActions } from "./VideoActions";
 import { VideoInfo } from "./VideoInfo";
 import { CommentsSheet } from "./CommentsSheet";
 import { SeriesViewer } from "./SeriesViewer";
 import { DuetIndicator } from "./DuetIndicator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Video } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
@@ -49,6 +50,7 @@ export function VideoCard({
   const [showSwipeHint, setShowSwipeHint] = useState<"left" | "right" | null>(null);
   const [showNextPartHint, setShowNextPartHint] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isLoadingNextPart, setIsLoadingNextPart] = useState(false);
 
   // Keep overlays safely above the fixed bottom nav (and device safe-area)
   // Uses --ui-safe-margin which can be changed via Settings > Display
@@ -214,6 +216,7 @@ export function VideoCard({
         // Series navigation
         if (isSwipeLeft) {
           setIsNavigating(true);
+          setIsLoadingNextPart(true);
           // Swipe left = next part
           const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
           if (nextVideo) {
@@ -221,6 +224,7 @@ export function VideoCard({
             toast({ title: `Part ${nextVideo.series_order}`, duration: 1500 });
             if (onSeriesNavigate) {
               const enriched = await enrichVideo(nextVideo);
+              setIsLoadingNextPart(false);
               onSeriesNavigate(enriched);
               setIsNavigating(false);
             } else {
@@ -230,9 +234,11 @@ export function VideoCard({
             triggerHaptic(100);
             toast({ title: "This is the last part", duration: 1500 });
             setIsNavigating(false);
+            setIsLoadingNextPart(false);
           }
         } else if (isSwipeRight) {
           setIsNavigating(true);
+          setIsLoadingNextPart(true);
           // Swipe right = previous part
           const prevVideo = await getPreviousVideoInSeries(video.series_id, video.series_order);
           if (prevVideo) {
@@ -240,6 +246,7 @@ export function VideoCard({
             toast({ title: `Part ${prevVideo.series_order}`, duration: 1500 });
             if (onSeriesNavigate) {
               const enriched = await enrichVideo(prevVideo);
+              setIsLoadingNextPart(false);
               onSeriesNavigate(enriched);
               setIsNavigating(false);
             } else {
@@ -249,6 +256,7 @@ export function VideoCard({
             triggerHaptic(100);
             toast({ title: "This is the first part", duration: 1500 });
             setIsNavigating(false);
+            setIsLoadingNextPart(false);
           }
         }
       } else if (isSwipeLeft) {
@@ -307,6 +315,19 @@ export function VideoCard({
           <div className="flex flex-col items-center gap-2 animate-pulse">
             <SkipForward className="w-12 h-12 text-primary" />
             <p className="text-lg font-semibold">Playing next part...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading skeleton overlay for series navigation */}
+      {isLoadingNextPart && (
+        <div className="absolute inset-0 z-40 pointer-events-none bg-background/40 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-10 h-10 text-primary animate-spin" />
+            <div className="flex flex-col items-center gap-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </div>
           </div>
         </div>
       )}
