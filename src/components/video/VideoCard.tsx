@@ -34,6 +34,9 @@ export function VideoCard({
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
+
+  // Keep overlays safely above the fixed bottom nav (and device safe-area)
+  const bottomUiOffset = "calc(1.5rem + var(--bottom-nav-height) + var(--safe-bottom))";
   
   const lastTapRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -189,7 +192,7 @@ export function VideoCard({
         className="absolute pointer-events-auto z-10"
         style={{
           right: "calc(var(--safe-right) + 0.5rem)",
-          bottom: "calc(0.75rem + var(--bottom-nav-height) + var(--safe-bottom))",
+          bottom: bottomUiOffset,
         }}
       >
         <VideoActions
@@ -210,7 +213,7 @@ export function VideoCard({
         className="absolute right-16 pointer-events-auto z-10"
         style={{
           left: "calc(var(--safe-left) + 0.75rem)",
-          bottom: "calc(0.75rem + var(--bottom-nav-height) + var(--safe-bottom))",
+          bottom: bottomUiOffset,
         }}
       >
         <VideoInfo
