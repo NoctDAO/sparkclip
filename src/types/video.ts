@@ -41,6 +41,9 @@ export interface Video {
   sound_id: string | null;
   series_id: string | null;
   series_order: number | null;
+  duet_source_id: string | null;
+  duet_layout: string | null;
+  allow_duets: boolean;
   created_at: string;
   profiles?: {
     username: string | null;

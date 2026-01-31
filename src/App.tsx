@@ -34,6 +34,7 @@ import Analytics from "./pages/Analytics";
 import Moderation from "./pages/Moderation";
 import AdminDashboard from "./pages/AdminDashboard";
 import Onboarding from "./pages/Onboarding";
+import DuetRecording from "./pages/DuetRecording";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +80,7 @@ const App = () => {
                       <Route path="/analytics" element={<Analytics />} />
                       <Route path="/moderation" element={<Moderation />} />
                       <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/duet/:videoId" element={<DuetRecording />} />
                       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                       <Route path="*" element={<NotFound />} />
                     </Routes>

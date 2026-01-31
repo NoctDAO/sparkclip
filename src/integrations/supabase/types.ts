@@ -891,9 +891,12 @@ export type Database = {
       }
       videos: {
         Row: {
+          allow_duets: boolean | null
           caption: string | null
           comments_count: number | null
           created_at: string
+          duet_layout: string | null
+          duet_source_id: string | null
           hashtags: string[] | null
           id: string
           likes_count: number | null
@@ -911,9 +914,12 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          allow_duets?: boolean | null
           caption?: string | null
           comments_count?: number | null
           created_at?: string
+          duet_layout?: string | null
+          duet_source_id?: string | null
           hashtags?: string[] | null
           id?: string
           likes_count?: number | null
@@ -931,9 +937,12 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          allow_duets?: boolean | null
           caption?: string | null
           comments_count?: number | null
           created_at?: string
+          duet_layout?: string | null
+          duet_source_id?: string | null
           hashtags?: string[] | null
           id?: string
           likes_count?: number | null
@@ -951,6 +960,13 @@ export type Database = {
           visibility?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "videos_duet_source_id_fkey"
+            columns: ["duet_source_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "videos_series_id_fkey"
             columns: ["series_id"]

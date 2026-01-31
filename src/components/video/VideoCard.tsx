@@ -6,6 +6,7 @@ import { VideoActions } from "./VideoActions";
 import { VideoInfo } from "./VideoInfo";
 import { CommentsSheet } from "./CommentsSheet";
 import { SeriesViewer } from "./SeriesViewer";
+import { DuetIndicator } from "./DuetIndicator";
 import { Video } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
@@ -352,10 +353,27 @@ export function VideoCard({
           initialViews={video.views_count}
           isLiked={liked}
           isBookmarked={isBookmarked}
+          allowDuets={video.allow_duets ?? true}
           onCommentClick={() => setShowComments(true)}
           onLikeChange={handleLikeChange}
         />
       </div>
+
+      {/* Duet Indicator (if this is a duet) */}
+      {video.duet_source_id && (
+        <div
+          className="absolute z-10 pointer-events-auto"
+          style={{
+            left: "calc(var(--safe-left) + 0.75rem)",
+            top: "calc(var(--safe-top) + 4rem)",
+          }}
+        >
+          <DuetIndicator
+            sourceVideoId={video.duet_source_id}
+            layout={video.duet_layout}
+          />
+        </div>
+      )}
 
       {/* Info (bottom) */}
       <div
