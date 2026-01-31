@@ -1030,6 +1030,7 @@ export type Database = {
       }
     }
     Functions: {
+      can_message_user: { Args: { target_user_id: string }; Returns: boolean }
       get_feed_videos: {
         Args: {
           p_blocked_user_ids?: string[]
