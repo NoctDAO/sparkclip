@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -165,22 +166,83 @@ export default function Profile() {
     );
   }
 
+  // SEO metadata
+  const displayName = profile.display_name || profile.username || "User";
+  const pageTitle = `${displayName} (@${profile.username || "user"}) | Creator Profile`;
+  const pageDescription = profile.bio 
+    ? `${profile.bio.slice(0, 150)}${profile.bio.length > 150 ? '...' : ''}`
+    : `Check out ${displayName}'s profile - ${profile.followers_count} followers, ${videos.length} videos`;
+  const pageUrl = `${window.location.origin}/profile/${userId}`;
+  const avatarUrl = profile.avatar_url || `${window.location.origin}/placeholder.svg`;
+
+  // JSON-LD structured data for Person
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": displayName,
+    "alternateName": profile.username ? `@${profile.username}` : undefined,
+    "url": pageUrl,
+    "image": avatarUrl,
+    "description": profile.bio || undefined,
+    "interactionStatistic": [
+      {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/FollowAction",
+        "userInteractionCount": profile.followers_count
+      },
+      {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/LikeAction",
+        "userInteractionCount": profile.likes_count
+      }
+    ],
+    "sameAs": pageUrl
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4">
-        <button onClick={() => navigate(-1)} className="p-2">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <h1 className="font-bold text-lg">@{profile.username || "user"}</h1>
-        {isOwnProfile ? (
-          <button onClick={() => navigate("/settings")} className="p-2">
-            <Settings className="w-6 h-6" />
+    <>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        
+        {/* Open Graph */}
+        <meta property="og:type" content="profile" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:image" content={avatarUrl} />
+        <meta property="profile:username" content={profile.username || "user"} />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={avatarUrl} />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href={pageUrl} />
+        
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
+      </Helmet>
+
+      <div className="min-h-screen bg-background text-foreground pb-20">
+        {/* Header */}
+        <header className="flex items-center justify-between p-4">
+          <button onClick={() => navigate(-1)} className="p-2">
+            <ArrowLeft className="w-6 h-6" />
           </button>
-        ) : (
-          <div className="w-10" />
-        )}
-      </header>
+          <h1 className="font-bold text-lg">@{profile.username || "user"}</h1>
+          {isOwnProfile ? (
+            <button onClick={() => navigate("/settings")} className="p-2">
+              <Settings className="w-6 h-6" />
+            </button>
+          ) : (
+            <div className="w-10" />
+          )}
+        </header>
 
       {/* Profile Info */}
       <div className="flex flex-col items-center px-4 pb-4">
@@ -366,5 +428,6 @@ export default function Profile() {
 
       <BottomNav />
     </div>
+    </>
   );
 }
