@@ -156,7 +156,7 @@ export function VideoCard({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <VideoPlayer src={video.video_url} isActive={isActive} videoId={video.id} />
+        <VideoPlayer src={video.video_url} isActive={isActive} videoId={video.id} bottomNavVisible={bottomNavVisible} />
       </div>
 
       {/* Swipe hint indicator */}
