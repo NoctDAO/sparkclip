@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft, Eye, Heart, MessageCircle, Share2, Play, Layers, Pencil, Copy, Check } from "lucide-react";
+import { ArrowLeft, Eye, Heart, MessageCircle, Share2, Play, Layers, Pencil, Check, Bell, BellOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SeriesManager } from "@/components/video/SeriesManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
+import { useSeriesFollow } from "@/hooks/useSeriesFollow";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSeries, Video, Profile } from "@/types/video";
@@ -18,6 +19,7 @@ export default function SeriesDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { getSeriesById, getSeriesVideos } = useVideoSeries();
+  const { isFollowing, toggling, toggleFollow } = useSeriesFollow(seriesId);
 
   const [series, setSeries] = useState<VideoSeries | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -201,25 +203,47 @@ export default function SeriesDetail() {
 
           {/* Creator info */}
           {creator && (
-            <Link
-              to={`/profile/${creator.user_id}`}
-              className="flex items-center gap-3 mt-4 p-3 bg-secondary rounded-lg"
-            >
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={creator.avatar_url || undefined} />
-                <AvatarFallback>
-                  {creator.display_name?.[0] || creator.username?.[0] || "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">
-                  {creator.display_name || creator.username || "Unknown"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  @{creator.username || "user"}
-                </p>
-              </div>
-            </Link>
+            <div className="flex items-center gap-3 mt-4 p-3 bg-secondary rounded-lg">
+              <Link to={`/profile/${creator.user_id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                <Avatar className="w-10 h-10">
+                  <AvatarImage src={creator.avatar_url || undefined} />
+                  <AvatarFallback>
+                    {creator.display_name?.[0] || creator.username?.[0] || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">
+                    {creator.display_name || creator.username || "Unknown"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    @{creator.username || "user"}
+                  </p>
+                </div>
+              </Link>
+              
+              {/* Follow button - only show if not the owner */}
+              {!isOwner && user && (
+                <Button
+                  variant={isFollowing ? "secondary" : "default"}
+                  size="sm"
+                  onClick={toggleFollow}
+                  disabled={toggling}
+                  className="flex-shrink-0 gap-1.5"
+                >
+                  {isFollowing ? (
+                    <>
+                      <BellOff className="w-4 h-4" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="w-4 h-4" />
+                      Follow
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           )}
 
           {/* Combined Stats */}

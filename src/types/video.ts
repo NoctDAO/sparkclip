@@ -87,7 +87,7 @@ export interface Notification {
   id: string;
   user_id: string;
   actor_id: string;
-  type: 'mention' | 'comment_like' | 'reply' | 'like' | 'follow';
+  type: 'mention' | 'comment_like' | 'reply' | 'like' | 'follow' | 'new_series_part';
   video_id: string | null;
   comment_id: string | null;
   is_read: boolean;
@@ -101,6 +101,11 @@ export interface Notification {
   video?: {
     id: string;
     thumbnail_url: string | null;
+    series_id?: string | null;
+    series?: {
+      id: string;
+      title: string;
+    } | null;
   };
   comment?: {
     id: string;
