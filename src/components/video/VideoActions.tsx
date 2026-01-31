@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Share2, Bookmark, Eye } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Eye, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
+import { ReportDialog } from "@/components/ReportDialog";
 interface VideoActionsProps {
   videoId: string;
   initialLikes: number;
@@ -35,6 +35,7 @@ export function VideoActions({
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(isBookmarked);
   const [likesCount, setLikesCount] = useState(initialLikes);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   // Sync with parent state
   useEffect(() => {
@@ -202,6 +203,24 @@ export function VideoActions({
           {formatCount(initialShares)}
         </span>
       </button>
+
+      {/* Report */}
+      <button
+        onClick={() => setShowReportDialog(true)}
+        className="flex flex-col items-center gap-0.5"
+      >
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+          <Flag className="w-6 h-6 text-foreground drop-shadow-md" />
+        </div>
+        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Report</span>
+      </button>
+
+      <ReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        contentId={videoId}
+        contentType="video"
+      />
     </div>
   );
 }
