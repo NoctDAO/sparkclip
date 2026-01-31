@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { VideoFeed } from "@/components/video/VideoFeed";
 import { FeedTabs } from "@/components/layout/FeedTabs";
@@ -6,6 +6,11 @@ import { BottomNav } from "@/components/layout/BottomNav";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"foryou" | "following">("foryou");
+  const [barsVisible, setBarsVisible] = useState(true);
+
+  const handleScrollDirectionChange = useCallback((isScrollingUp: boolean) => {
+    setBarsVisible(isScrollingUp);
+  }, []);
 
   // SEO metadata
   const siteName = "VidShare";
@@ -100,9 +105,9 @@ const Index = () => {
       </Helmet>
 
       <div className="h-screen w-full bg-background overflow-hidden">
-        <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
-        <VideoFeed feedType={activeTab} />
-        <BottomNav />
+        <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} isVisible={barsVisible} />
+        <VideoFeed feedType={activeTab} onScrollDirectionChange={handleScrollDirectionChange} />
+        <BottomNav isVisible={barsVisible} />
       </div>
     </>
   );

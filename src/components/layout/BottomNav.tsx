@@ -4,7 +4,11 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 
-export function BottomNav() {
+interface BottomNavProps {
+  isVisible?: boolean;
+}
+
+export function BottomNav({ isVisible = true }: BottomNavProps) {
   const location = useLocation();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
@@ -18,7 +22,12 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
+    <nav 
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border transition-transform duration-300",
+        !isVisible && "translate-y-full"
+      )}
+    >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || 
