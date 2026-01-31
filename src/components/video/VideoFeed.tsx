@@ -33,6 +33,7 @@ export function VideoFeed({
   const containerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const lastTouchY = useRef(0);
+
   const fetchVideos = useCallback(async () => {
     setLoading(true);
     
@@ -131,6 +132,35 @@ export function VideoFeed({
     fetchUserInteractions();
   }, [fetchVideos, fetchUserInteractions]);
 
+  // Handle in-feed series navigation
+  const handleSeriesNavigation = useCallback((newVideo: Video) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Check if video already exists in feed
+    const existingIndex = videos.findIndex(v => v.id === newVideo.id);
+    
+    if (existingIndex !== -1) {
+      // Video exists, just scroll to it
+      const targetScrollTop = existingIndex * container.clientHeight;
+      container.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+      setCurrentIndex(existingIndex);
+    } else {
+      // Insert new video after current position
+      const insertIndex = currentIndex + 1;
+      const newVideos = [...videos];
+      newVideos.splice(insertIndex, 0, newVideo);
+      setVideos(newVideos);
+      
+      // Wait for DOM update, then scroll
+      requestAnimationFrame(() => {
+        const targetScrollTop = insertIndex * container.clientHeight;
+        container.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+        setCurrentIndex(insertIndex);
+      });
+    }
+  }, [videos, currentIndex]);
+
   const handleScroll = () => {
     const container = containerRef.current;
     if (!container) return;
@@ -201,7 +231,7 @@ export function VideoFeed({
       className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
     >
       {videos.map((video, index) => (
-        <div key={video.id} className="h-full w-full">
+        <div key={video.id} className="h-full w-full snap-start snap-always">
           <VideoCard
             video={video}
             isActive={index === currentIndex}
@@ -209,6 +239,7 @@ export function VideoFeed({
             isBookmarked={userInteractions.bookmarks.has(video.id)}
             isFollowing={userInteractions.following.has(video.user_id)}
             bottomNavVisible={bottomNavVisible}
+            onSeriesNavigate={handleSeriesNavigation}
           />
         </div>
       ))}

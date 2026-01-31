@@ -22,7 +22,7 @@ interface VideoCardProps {
   isBookmarked?: boolean;
   isFollowing?: boolean;
   bottomNavVisible?: boolean;
-  onNavigateToVideo?: (videoId: string) => void;
+  onSeriesNavigate?: (video: Video) => void;
 }
 
 export function VideoCard({ 
@@ -32,7 +32,7 @@ export function VideoCard({
   isBookmarked = false,
   isFollowing = false,
   bottomNavVisible = true,
-  onNavigateToVideo,
+  onSeriesNavigate,
 }: VideoCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -61,6 +61,19 @@ export function VideoCard({
   const swipeLockedRef = useRef(false);
   const isInSeries = !!(video.series_id && video.series_order);
 
+  // Helper to enrich video with profile/series data
+  const enrichVideo = useCallback(async (rawVideo: Video): Promise<Video> => {
+    const [profileRes, seriesRes] = await Promise.all([
+      supabase.from("profiles").select("user_id, username, display_name, avatar_url").eq("user_id", rawVideo.user_id).maybeSingle(),
+      rawVideo.series_id ? supabase.from("video_series").select("*").eq("id", rawVideo.series_id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+    return {
+      ...rawVideo,
+      profiles: profileRes.data || null,
+      series: seriesRes.data || null,
+    };
+  }, []);
+
   const handleVideoEnd = useCallback(async () => {
     if (!autoPlayEnabled || !video.series_id || !video.series_order) return;
 
@@ -72,16 +85,17 @@ export function VideoCard({
         description: nextVideo.caption || "Playing next part...",
       });
       
-      setTimeout(() => {
+      setTimeout(async () => {
         setShowNextPartHint(false);
-        if (onNavigateToVideo) {
-          onNavigateToVideo(nextVideo.id);
+        if (onSeriesNavigate) {
+          const enriched = await enrichVideo(nextVideo);
+          onSeriesNavigate(enriched);
         } else {
           navigate(`/video/${nextVideo.id}`);
         }
       }, 1500);
     }
-  }, [autoPlayEnabled, video.series_id, video.series_order, getNextVideoInSeries, navigate, onNavigateToVideo, toast]);
+  }, [autoPlayEnabled, video.series_id, video.series_order, getNextVideoInSeries, navigate, onSeriesNavigate, toast, enrichVideo]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     // Don't start new swipe if navigation is in progress
@@ -205,8 +219,10 @@ export function VideoCard({
           if (nextVideo) {
             triggerHaptic([30, 20, 30]);
             toast({ title: `Part ${nextVideo.series_order}`, duration: 1500 });
-            if (onNavigateToVideo) {
-              onNavigateToVideo(nextVideo.id);
+            if (onSeriesNavigate) {
+              const enriched = await enrichVideo(nextVideo);
+              onSeriesNavigate(enriched);
+              setIsNavigating(false);
             } else {
               navigate(`/video/${nextVideo.id}`);
             }
@@ -222,8 +238,10 @@ export function VideoCard({
           if (prevVideo) {
             triggerHaptic([30, 20, 30]);
             toast({ title: `Part ${prevVideo.series_order}`, duration: 1500 });
-            if (onNavigateToVideo) {
-              onNavigateToVideo(prevVideo.id);
+            if (onSeriesNavigate) {
+              const enriched = await enrichVideo(prevVideo);
+              onSeriesNavigate(enriched);
+              setIsNavigating(false);
             } else {
               navigate(`/video/${prevVideo.id}`);
             }
@@ -252,7 +270,7 @@ export function VideoCard({
     setShowSwipeHint(null);
     touchStartRef.current = null;
     isSwipingRef.current = false;
-  }, [isInSeries, video.series_id, video.series_order, video.user_id, navigate, getNextVideoInSeries, getPreviousVideoInSeries, onNavigateToVideo, toast, isNavigating, handleDoubleTapLogic]);
+  }, [isInSeries, video.series_id, video.series_order, video.user_id, navigate, getNextVideoInSeries, getPreviousVideoInSeries, onSeriesNavigate, enrichVideo, toast, isNavigating, handleDoubleTapLogic]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     handleDoubleTapLogic(e);
