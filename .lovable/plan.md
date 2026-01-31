@@ -1,99 +1,173 @@
 
 
-# Plan: In-Feed Series Part Navigation
+# Plan: Quality, Image Optimization & Space Management
 
 ## Overview
-Update the video feed to support inline series navigation - when you swipe left/right on a series video, instead of navigating to a separate page, the feed will dynamically load and scroll to the next/previous part within the same feed view.
+Enhance the app's visual quality, optimize image/video loading for better performance, and improve how space is utilized across the UI for a more polished, professional experience.
 
 ---
 
-## Current Behavior
-- Swiping horizontally on a series video calls `navigate(\`/video/${nextVideo.id}\`)` 
-- This takes the user away from the main feed to a dedicated video page
-- User loses their place in the feed and has to navigate back
+## Current State Analysis
 
-## New Behavior
-- Swiping on series parts inserts the next/previous part into the feed dynamically
-- The feed scrolls smoothly to show the new video
-- User stays in the main feed experience with all videos still accessible
-- Original feed order is preserved when navigating away from series parts
+### Quality Issues Found
+- Images and videos use basic `<img>` and `<video>` tags without quality optimization
+- No progressive loading or blur-up placeholders for images
+- No srcset or responsive image sizes for different device densities
+- Avatar images lack consistent sizing and quality fallbacks
+- Video thumbnails load without smooth transitions
+
+### Space Management Issues
+- Video thumbnails in grids use fixed aspect ratios without adaptive sizing
+- Some UI elements have inconsistent padding and margins
+- No image cropping/fitting options for user-uploaded content
+- Series covers and sound covers lack uniform sizing
 
 ---
 
 ## Implementation Steps
 
-### 1. Update VideoFeed Component
-**File: `src/components/video/VideoFeed.tsx`**
+### 1. Create OptimizedImage Component
+**New File: `src/components/ui/optimized-image.tsx`**
 
-- Add a new callback `onNavigateToSeriesVideo(video: Video)` that:
-  - Checks if the video is already in the feed
-  - If not, inserts it at the appropriate position (after current video)
-  - Scrolls to the newly inserted video
-  - Updates the current index accordingly
+A reusable image component with:
+- Loading skeleton placeholder with shimmer effect
+- Fade-in animation when image loads
+- Error state fallback with subtle icon
+- `loading="lazy"` by default for offscreen images
+- Optional blur placeholder support
+- Consistent aspect ratio container
 
-- Pass this callback down to VideoCard via `onNavigateToVideo` prop
+### 2. Enhance Avatar Component
+**File: `src/components/ui/avatar.tsx`**
 
-### 2. Update VideoCard Component  
+- Add loading state with skeleton
+- Smooth fade-in when image loads
+- Better fallback styling with gradient backgrounds
+- Size variants (xs, sm, md, lg, xl) with consistent proportions
+
+### 3. Create VideoThumbnail Component  
+**New File: `src/components/video/VideoThumbnail.tsx`**
+
+A dedicated component for video thumbnails with:
+- Skeleton loading state
+- Smooth fade-in transition
+- Play icon overlay on hover
+- Consistent 9:16 aspect ratio container
+- Fallback to first frame if no thumbnail
+
+### 4. Update Video Player Quality
+**File: `src/components/video/VideoPlayer.tsx`**
+
+- Add `poster` attribute for thumbnail preview before video loads
+- Improve buffering indicator with blur backdrop
+- Add quality indicator badge (if metadata available)
+- Smoother transitions between buffering and playing states
+
+### 5. Improve Grid Layouts
+**Files: Profile.tsx, Discover.tsx, Search results**
+
+- Add consistent gap spacing (use Tailwind's `gap-1` or `gap-0.5`)
+- Ensure uniform aspect ratios for all grid items
+- Add hover scale effect for better interaction feedback
+- Implement staggered fade-in animation for grid items
+
+### 6. Add Skeleton Loading Components
+**Update: `src/components/ui/skeleton.tsx`**
+
+Create preset skeleton patterns:
+- VideoGridSkeleton (3-column grid of 9:16 thumbnails)
+- AvatarSkeleton (circular with shimmer)
+- TextLineSkeleton (for captions/titles)
+
+### 7. Optimize Space Utilization in VideoCard
 **File: `src/components/video/VideoCard.tsx`**
 
-- Modify the series swipe handling to:
-  - Fetch the next/previous video data
-  - Call the parent's navigation callback instead of `navigate()`
-  - Keep the smooth animation and haptic feedback
-  - Only fall back to page navigation if callback isn't provided (for standalone video pages)
+- Tighten spacing in overlay elements
+- Use compact action buttons that expand on focus
+- Improve gradient overlay for better text readability
+- Ensure safe areas are respected without wasting space
 
-### 3. Add Smooth Scroll Animation
-- When inserting a new video into the feed, use `scrollTo` with smooth behavior
-- Add a brief loading state while fetching the next video
-- Maintain snap scrolling behavior after insertion
+### 8. CSS Utilities for Image/Video Quality
+**File: `src/index.css`**
+
+Add utility classes:
+- `.img-loading` - shimmer placeholder
+- `.img-loaded` - fade-in transition
+- `.aspect-video-9-16` - consistent 9:16 ratio
+- `.backdrop-quality` - high-quality backdrop blur
 
 ---
 
 ## Technical Details
 
-### VideoFeed Changes
+### OptimizedImage Component Props
 ```text
-New state:
-- Track "injected" series videos separately from original feed
-- Maintain scroll position during dynamic insertions
-
-New function:
-- handleSeriesNavigation(newVideo, direction) 
-  - Insert video at correct position
-  - Smooth scroll to new position
-  - Update currentIndex
+interface OptimizedImageProps {
+  src: string;
+  alt: string;
+  aspectRatio?: "square" | "video" | "cover" | number;
+  fallback?: ReactNode;
+  className?: string;
+  showSkeleton?: boolean;
+  priority?: boolean; // skip lazy loading for above-fold images
+}
 ```
 
-### VideoCard Changes  
+### VideoThumbnail Component Props
 ```text
-Modify handleTouchEnd:
-- When series swipe detected:
-  - Fetch next/previous video
-  - If onNavigateToVideo callback exists, call it with full video data
-  - Otherwise, fall back to navigate() for standalone pages
+interface VideoThumbnailProps {
+  thumbnailUrl?: string;
+  videoUrl: string;
+  alt?: string;
+  showPlayIcon?: boolean;
+  onClick?: () => void;
+  className?: string;
+}
 ```
 
-### Edge Cases Handled
-- Video already exists in feed: scroll to it instead of duplicating
-- First/last part: show toast message, no navigation
-- Loading state: brief shimmer/loader while fetching next part
-- Returning to original position: preserve feed order
+### Animation Keyframes to Add
+```text
+image-fade-in: opacity 0 -> 1 over 300ms with scale 0.98 -> 1
+skeleton-pulse: smoother pulse animation for loading states
+```
+
+### Grid Layout Improvements
+```text
+Profile videos grid:
+- gap-0.5 for tight spacing
+- rounded corners on items
+- group hover effects
+
+Trending sections:
+- Horizontal scroll with snap points
+- Consistent card widths
+- Shadow/gradient edges to indicate scrollability
+```
 
 ---
 
-## Files to Modify
+## Files to Modify/Create
 
 | File | Changes |
 |------|---------|
-| `src/components/video/VideoFeed.tsx` | Add series navigation callback, dynamic video insertion, scroll handling |
-| `src/components/video/VideoCard.tsx` | Update swipe handlers to use callback, pass full video data |
+| `src/components/ui/optimized-image.tsx` | **NEW** - Reusable optimized image component |
+| `src/components/video/VideoThumbnail.tsx` | **NEW** - Video thumbnail with loading states |
+| `src/components/ui/avatar.tsx` | Add loading states, size variants |
+| `src/components/ui/skeleton.tsx` | Add preset skeleton patterns |
+| `src/components/video/VideoPlayer.tsx` | Add poster, improve buffering UI |
+| `src/components/video/VideoCard.tsx` | Optimize overlay spacing |
+| `src/pages/Profile.tsx` | Use VideoThumbnail, improve grid |
+| `src/components/trending/TrendingVideos.tsx` | Use VideoThumbnail component |
+| `src/components/search/VideoResults.tsx` | Use VideoThumbnail component |
+| `src/index.css` | Add image/video quality utilities |
+| `tailwind.config.ts` | Add image-fade-in animation |
 
 ---
 
-## User Experience
-- Swipe left on series video → next part slides in seamlessly
-- Swipe right on series video → previous part slides in  
-- Vertical scrolling continues to work normally
-- Series indicator badge still visible to show current part
-- Toast notifications confirm part changes
+## Expected Improvements
+
+- **Perceived Performance**: Skeleton loaders and fade-in animations make loading feel faster
+- **Visual Quality**: Consistent image sizing, smooth transitions, and polished loading states
+- **Space Efficiency**: Tighter grid gaps, optimized overlay positioning, and uniform aspect ratios
+- **Professional Feel**: Native-app-like image loading behavior with error handling
 
