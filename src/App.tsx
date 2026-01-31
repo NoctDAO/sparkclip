@@ -27,6 +27,7 @@ import FollowList from "./pages/FollowList";
 import Sounds from "./pages/Sounds";
 import SoundDetail from "./pages/SoundDetail";
 import VideoPage from "./pages/VideoPage";
+import SeriesDetail from "./pages/SeriesDetail";
 import Analytics from "./pages/Analytics";
 import Moderation from "./pages/Moderation";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -69,6 +70,7 @@ const App = () => {
                       <Route path="/sounds" element={<Sounds />} />
                       <Route path="/sounds/:soundId" element={<SoundDetail />} />
                       <Route path="/video/:videoId" element={<VideoPage />} />
+                      <Route path="/series/:seriesId" element={<SeriesDetail />} />
                       <Route path="/analytics" element={<Analytics />} />
                       <Route path="/moderation" element={<Moderation />} />
                       <Route path="/admin" element={<AdminDashboard />} />
