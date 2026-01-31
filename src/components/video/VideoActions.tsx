@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, Bookmark, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useRateLimit } from "@/hooks/useRateLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,6 +31,7 @@ export function VideoActions({
 }: VideoActionsProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { checkRateLimit: checkLikeLimit } = useRateLimit("like");
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(isBookmarked);
   const [likesCount, setLikesCount] = useState(initialLikes);
@@ -48,6 +50,8 @@ export function VideoActions({
       toast({ title: "Please sign in to like videos", variant: "destructive" });
       return;
     }
+
+    if (!checkLikeLimit()) return;
 
     if (liked) {
       const { error } = await supabase
