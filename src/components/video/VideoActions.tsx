@@ -125,13 +125,13 @@ export function VideoActions({
   };
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    <div className="flex flex-col items-center gap-4">
       {/* Views */}
-      <div className="flex flex-col items-center gap-1">
-        <div className="p-3 rounded-full bg-secondary/80">
-          <Eye className="w-7 h-7 text-foreground" />
+      <div className="flex flex-col items-center gap-0.5">
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+          <Eye className="w-6 h-6 text-foreground drop-shadow-md" />
         </div>
-        <span className="text-xs font-semibold text-foreground">
+        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
           {formatCount(initialViews)}
         </span>
       </div>
@@ -139,20 +139,20 @@ export function VideoActions({
       {/* Like */}
       <button
         onClick={handleLike}
-        className="flex flex-col items-center gap-1"
+        className="flex flex-col items-center gap-0.5"
       >
         <div className={cn(
-          "p-3 rounded-full bg-secondary/80 transition-all",
+          "p-2 rounded-full backdrop-blur-sm bg-background/20 transition-all",
           liked && "animate-heart"
         )}>
           <Heart
             className={cn(
-              "w-7 h-7 transition-colors",
+              "w-6 h-6 transition-colors drop-shadow-md",
               liked ? "text-heart fill-heart" : "text-foreground"
             )}
           />
         </div>
-        <span className="text-xs font-semibold text-foreground">
+        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
           {formatCount(likesCount)}
         </span>
       </button>
@@ -160,12 +160,12 @@ export function VideoActions({
       {/* Comment */}
       <button
         onClick={onCommentClick}
-        className="flex flex-col items-center gap-1"
+        className="flex flex-col items-center gap-0.5"
       >
-        <div className="p-3 rounded-full bg-secondary/80">
-          <MessageCircle className="w-7 h-7 text-foreground" />
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+          <MessageCircle className="w-6 h-6 text-foreground drop-shadow-md" />
         </div>
-        <span className="text-xs font-semibold text-foreground">
+        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
           {formatCount(initialComments)}
         </span>
       </button>
@@ -173,28 +173,28 @@ export function VideoActions({
       {/* Bookmark */}
       <button
         onClick={handleBookmark}
-        className="flex flex-col items-center gap-1"
+        className="flex flex-col items-center gap-0.5"
       >
-        <div className="p-3 rounded-full bg-secondary/80">
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
           <Bookmark
             className={cn(
-              "w-7 h-7 transition-colors",
+              "w-6 h-6 transition-colors drop-shadow-md",
               bookmarked ? "text-bookmark fill-bookmark" : "text-foreground"
             )}
           />
         </div>
-        <span className="text-xs font-semibold text-foreground">Save</span>
+        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Save</span>
       </button>
 
       {/* Share */}
       <button
         onClick={handleShare}
-        className="flex flex-col items-center gap-1"
+        className="flex flex-col items-center gap-0.5"
       >
-        <div className="p-3 rounded-full bg-secondary/80">
-          <Share2 className="w-7 h-7 text-foreground" />
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+          <Share2 className="w-6 h-6 text-foreground drop-shadow-md" />
         </div>
-        <span className="text-xs font-semibold text-foreground">
+        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
           {formatCount(initialShares)}
         </span>
       </button>

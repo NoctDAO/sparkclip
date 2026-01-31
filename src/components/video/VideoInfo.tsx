@@ -68,19 +68,19 @@ export function VideoInfo({
   };
 
   return (
-    <div className="flex flex-col gap-3 max-w-[80%]">
+    <div className="flex flex-col gap-2 max-w-[85%]">
       {/* User info */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Link to={`/profile/${userId}`}>
-          <Avatar className="w-10 h-10 border-2 border-foreground">
+          <Avatar className="w-9 h-9 border border-foreground/50">
             <AvatarImage src={avatarUrl || undefined} />
-            <AvatarFallback className="bg-secondary text-foreground">
+            <AvatarFallback className="bg-secondary text-foreground text-sm">
               {(displayName || username || "U")[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </Link>
         
-        <Link to={`/profile/${userId}`} className="font-bold text-foreground hover:underline">
+        <Link to={`/profile/${userId}`} className="font-semibold text-sm text-foreground hover:underline drop-shadow-sm">
           @{username || "user"}
         </Link>
         
@@ -90,52 +90,46 @@ export function VideoInfo({
             disabled={loading}
             variant={following ? "secondary" : "default"}
             size="sm"
-            className="h-7 px-4 text-xs font-semibold"
+            className="h-6 px-3 text-[11px] font-semibold"
           >
             {following ? "Following" : "Follow"}
           </Button>
         )}
       </div>
 
-      {/* Caption */}
-      {caption && (
-        <p className="text-sm text-foreground leading-relaxed">
-          {caption}
-        </p>
-      )}
-
-      {/* Hashtags */}
-      {hashtags && hashtags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {hashtags.map((tag, index) => (
+      {/* Caption & Hashtags inline */}
+      {(caption || (hashtags && hashtags.length > 0)) && (
+        <p className="text-[13px] text-foreground leading-snug drop-shadow-sm">
+          {caption && <span>{caption} </span>}
+          {hashtags && hashtags.map((tag, index) => (
             <Link
               key={index}
               to={`/tag/${tag.replace("#", "")}`}
-              className="text-sm font-semibold text-foreground hover:underline"
+              className="font-semibold text-foreground hover:underline"
             >
-              #{tag.replace("#", "")}
+              #{tag.replace("#", "")}{" "}
             </Link>
           ))}
-        </div>
+        </p>
       )}
 
       {/* Sound info */}
       {sound ? (
         <Link 
           to={`/sounds/${sound.id}`}
-          className="flex items-center gap-2 mt-1 group"
+          className="flex items-center gap-1.5 group"
         >
-          <div className="w-4 h-4 flex items-center justify-center animate-spin" style={{ animationDuration: "3s" }}>
-            <Music className="w-4 h-4 text-foreground" />
+          <div className="w-3.5 h-3.5 flex items-center justify-center animate-spin" style={{ animationDuration: "3s" }}>
+            <Music className="w-3.5 h-3.5 text-foreground/80" />
           </div>
-          <span className="text-sm text-foreground truncate max-w-[200px] group-hover:underline">
+          <span className="text-xs text-foreground/80 truncate max-w-[180px] group-hover:underline">
             {sound.title} - {sound.artist || "Unknown"}
           </span>
         </Link>
       ) : (
-        <div className="flex items-center gap-2 mt-1">
-          <Music className="w-4 h-4 text-foreground" />
-          <span className="text-sm text-foreground truncate max-w-[200px]">
+        <div className="flex items-center gap-1.5">
+          <Music className="w-3.5 h-3.5 text-foreground/80" />
+          <span className="text-xs text-foreground/80 truncate max-w-[180px]">
             Original sound - {displayName || username || "user"}
           </span>
         </div>

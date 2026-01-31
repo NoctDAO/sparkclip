@@ -185,7 +185,7 @@ export function VideoCard({
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-transparent to-background/60" />
 
       {/* Actions (right side) */}
-      <div className="absolute right-3 bottom-24 pointer-events-auto z-10">
+      <div className="absolute right-2 bottom-20 pointer-events-auto z-10">
         <VideoActions
           videoId={video.id}
           initialLikes={likesCount}
@@ -200,7 +200,7 @@ export function VideoCard({
       </div>
 
       {/* Info (bottom) */}
-      <div className="absolute left-3 bottom-24 right-20 pointer-events-auto z-10">
+      <div className="absolute left-3 bottom-20 right-16 pointer-events-auto z-10">
         <VideoInfo
           userId={video.user_id}
           username={video.profiles?.username || null}
