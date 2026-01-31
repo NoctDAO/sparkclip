@@ -131,6 +131,13 @@ export function VideoCard({
     const isSwipeLeft = deltaX < -100 || (deltaX < -50 && deltaTime < 300);
     const isSwipeRight = deltaX > 100 || (deltaX > 50 && deltaTime < 300);
 
+    // Haptic feedback helper
+    const triggerHaptic = (pattern: number | number[] = 50) => {
+      if ("vibrate" in navigator) {
+        navigator.vibrate(pattern);
+      }
+    };
+
     if (isSwipingRef.current) {
       if (isInSeries && video.series_id && video.series_order) {
         // Series navigation
@@ -138,6 +145,7 @@ export function VideoCard({
           // Swipe left = next part
           const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
           if (nextVideo) {
+            triggerHaptic([30, 20, 30]); // Double tap pattern for success
             toast({ title: `Part ${nextVideo.series_order}`, duration: 1500 });
             if (onNavigateToVideo) {
               onNavigateToVideo(nextVideo.id);
@@ -145,12 +153,14 @@ export function VideoCard({
               navigate(`/video/${nextVideo.id}`);
             }
           } else {
+            triggerHaptic(100); // Longer vibration for boundary
             toast({ title: "This is the last part", duration: 1500 });
           }
         } else if (isSwipeRight) {
           // Swipe right = previous part
           const prevVideo = await getPreviousVideoInSeries(video.series_id, video.series_order);
           if (prevVideo) {
+            triggerHaptic([30, 20, 30]); // Double tap pattern for success
             toast({ title: `Part ${prevVideo.series_order}`, duration: 1500 });
             if (onNavigateToVideo) {
               onNavigateToVideo(prevVideo.id);
@@ -158,6 +168,7 @@ export function VideoCard({
               navigate(`/video/${prevVideo.id}`);
             }
           } else {
+            triggerHaptic(100); // Longer vibration for boundary
             toast({ title: "This is the first part", duration: 1500 });
           }
         }
