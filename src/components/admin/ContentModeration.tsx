@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Trash2, Eye, Play, MessageSquare, MoreHorizontal, EyeOff, RotateCcw } from "lucide-react";
+import { Trash2, Eye, Play, MessageSquare, MoreHorizontal, EyeOff, RotateCcw, XSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,7 @@ interface CommentItem {
 }
 
 type ActionType = "delete" | "hide" | "restore";
+type BulkActionType = "delete" | "hide";
 
 export function ContentModeration() {
   const { user } = useAuth();
@@ -73,6 +75,16 @@ export function ContentModeration() {
   }>({ open: false, type: null, action: null, item: null });
   const [moderationNote, setModerationNote] = useState("");
   const [processing, setProcessing] = useState(false);
+  
+  // Bulk selection state
+  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+  const [selectedCommentIds, setSelectedCommentIds] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState<{
+    open: boolean;
+    type: "video" | "comment";
+    action: BulkActionType;
+  } | null>(null);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   useEffect(() => {
     fetchContent();
@@ -253,6 +265,104 @@ export function ContentModeration() {
     }
   };
 
+  const handleBulkAction = async () => {
+    if (!bulkDialog || !user) return;
+    
+    setBulkProcessing(true);
+    const { type, action } = bulkDialog;
+    const selectedIds = type === "video" ? selectedVideoIds : selectedCommentIds;
+    
+    try {
+      if (type === "video") {
+        if (action === "delete") {
+          const { error } = await supabase
+            .from("videos")
+            .delete()
+            .in("id", Array.from(selectedIds));
+          if (error) throw error;
+          
+          for (const id of selectedIds) {
+            await logAdminAction("bulk_delete_video", "video", id, { reason: moderationNote });
+          }
+        } else if (action === "hide") {
+          const { error } = await supabase
+            .from("videos")
+            .update({
+              visibility: "hidden",
+              moderation_note: moderationNote || null,
+              moderated_by: user.id,
+              moderated_at: new Date().toISOString(),
+            })
+            .in("id", Array.from(selectedIds));
+          if (error) throw error;
+          
+          for (const id of selectedIds) {
+            await logAdminAction("bulk_hide_video", "video", id, { reason: moderationNote });
+          }
+        }
+        setSelectedVideoIds(new Set());
+      } else if (type === "comment") {
+        const { error } = await supabase
+          .from("comments")
+          .delete()
+          .in("id", Array.from(selectedIds));
+        if (error) throw error;
+        
+        for (const id of selectedIds) {
+          await logAdminAction("bulk_delete_comment", "comment", id, { reason: moderationNote });
+        }
+        setSelectedCommentIds(new Set());
+      }
+
+      toast({
+        title: `${action === "delete" ? "Deleted" : "Hidden"} ${selectedIds.size} ${type}s`,
+      });
+      
+      await fetchContent();
+      setBulkDialog(null);
+      setModerationNote("");
+    } catch (error) {
+      console.error("Bulk action error:", error);
+      toast({
+        title: "Bulk action failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const toggleVideoSelect = (id: string) => {
+    const newSet = new Set(selectedVideoIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedVideoIds(newSet);
+  };
+
+  const toggleCommentSelect = (id: string) => {
+    const newSet = new Set(selectedCommentIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedCommentIds(newSet);
+  };
+
+  const toggleSelectAllVideos = () => {
+    if (selectedVideoIds.size === videos.length) {
+      setSelectedVideoIds(new Set());
+    } else {
+      setSelectedVideoIds(new Set(videos.map(v => v.id)));
+    }
+  };
+
+  const toggleSelectAllComments = () => {
+    if (selectedCommentIds.size === comments.length) {
+      setSelectedCommentIds(new Set());
+    } else {
+      setSelectedCommentIds(new Set(comments.map(c => c.id)));
+    }
+  };
+
   const getDialogContent = () => {
     const { action, type } = actionDialog;
     if (!action || !type) return { title: "", description: "" };
@@ -308,29 +418,49 @@ export function ContentModeration() {
         </TabsList>
 
         <TabsContent value="videos" className="mt-4 space-y-2">
-          {videos.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No videos found
+          {selectedVideoIds.size > 0 && (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted">
+              <span className="text-sm font-medium">{selectedVideoIds.size} selected</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedVideoIds(new Set())}>
+                  <XSquare className="w-4 h-4 mr-1" />Clear
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setBulkDialog({ open: true, type: "video", action: "hide" })}>
+                  <EyeOff className="w-4 h-4 mr-1" />Hide {selectedVideoIds.size}
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setBulkDialog({ open: true, type: "video", action: "delete" })}>
+                  <Trash2 className="w-4 h-4 mr-1" />Delete {selectedVideoIds.size}
+                </Button>
+              </div>
             </div>
+          )}
+          {videos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No videos found</div>
           ) : (
-            videos.map((video) => (
-              <VideoCard
-                key={video.id}
-                video={video}
-                onView={() => navigate(`/video/${video.id}`)}
-                onHide={() => setActionDialog({ open: true, type: "video", action: "hide", item: video })}
-                onDelete={() => setActionDialog({ open: true, type: "video", action: "delete", item: video })}
-                formatCount={formatCount}
-              />
-            ))
+            <>
+              <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground">
+                <Checkbox checked={selectedVideoIds.size === videos.length && videos.length > 0} onCheckedChange={toggleSelectAllVideos} />
+                <span>Select all ({videos.length})</span>
+              </div>
+              {videos.map((video) => (
+                <VideoCard
+                  key={video.id}
+                  video={video}
+                  selected={selectedVideoIds.has(video.id)}
+                  onSelect={() => toggleVideoSelect(video.id)}
+                  onView={() => navigate(`/video/${video.id}`)}
+                  onHide={() => setActionDialog({ open: true, type: "video", action: "hide", item: video })}
+                  onDelete={() => setActionDialog({ open: true, type: "video", action: "delete", item: video })}
+                  formatCount={formatCount}
+                />
+              ))}
+            </>
           )}
         </TabsContent>
 
         <TabsContent value="hidden" className="mt-4 space-y-2">
           {hiddenVideos.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No hidden videos
-            </div>
+            <div className="text-center py-8 text-muted-foreground">No hidden videos</div>
           ) : (
             hiddenVideos.map((video) => (
               <VideoCard
@@ -347,63 +477,71 @@ export function ContentModeration() {
         </TabsContent>
 
         <TabsContent value="comments" className="mt-4 space-y-2">
-          {comments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No comments found
-            </div>
-          ) : (
-            comments.map((comment) => (
-              <div
-                key={comment.id}
-                className="flex items-start gap-3 p-3 bg-card rounded-lg border border-border"
-              >
-                <Avatar className="w-8 h-8 flex-shrink-0">
-                  <AvatarImage src={comment.profile?.avatar_url || undefined} />
-                  <AvatarFallback>
-                    {(comment.profile?.username || "U")[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium">
-                      @{comment.profile?.username || "unknown"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(comment.created_at), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-sm">{comment.content}</p>
-                </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => navigate(`/video/${comment.video_id}`)}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Video
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        setActionDialog({ open: true, type: "comment", action: "delete", item: comment })
-                      }
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Comment
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          {selectedCommentIds.size > 0 && (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted">
+              <span className="text-sm font-medium">{selectedCommentIds.size} selected</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedCommentIds(new Set())}>
+                  <XSquare className="w-4 h-4 mr-1" />Clear
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setBulkDialog({ open: true, type: "comment", action: "delete" })}>
+                  <Trash2 className="w-4 h-4 mr-1" />Delete {selectedCommentIds.size}
+                </Button>
               </div>
-            ))
+            </div>
+          )}
+          {comments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No comments found</div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground">
+                <Checkbox checked={selectedCommentIds.size === comments.length && comments.length > 0} onCheckedChange={toggleSelectAllComments} />
+                <span>Select all ({comments.length})</span>
+              </div>
+              {comments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className={`flex items-start gap-3 p-3 bg-card rounded-lg border ${selectedCommentIds.has(comment.id) ? "ring-2 ring-primary" : "border-border"}`}
+                >
+                  <Checkbox
+                    checked={selectedCommentIds.has(comment.id)}
+                    onCheckedChange={() => toggleCommentSelect(comment.id)}
+                    className="mt-1"
+                  />
+                  <Avatar className="w-8 h-8 flex-shrink-0">
+                    <AvatarImage src={comment.profile?.avatar_url || undefined} />
+                    <AvatarFallback>{(comment.profile?.username || "U")[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium">@{comment.profile?.username || "unknown"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <p className="text-sm">{comment.content}</p>
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => navigate(`/video/${comment.video_id}`)}>
+                        <Eye className="w-4 h-4 mr-2" />View Video
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setActionDialog({ open: true, type: "comment", action: "delete", item: comment })}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />Delete Comment
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+            </>
           )}
         </TabsContent>
       </Tabs>
@@ -451,6 +589,44 @@ export function ContentModeration() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Action Dialog */}
+      <Dialog open={!!bulkDialog?.open} onOpenChange={(open) => !open && setBulkDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkDialog?.action === "delete" ? "Delete" : "Hide"} {bulkDialog?.type === "video" ? selectedVideoIds.size : selectedCommentIds.size} {bulkDialog?.type}s
+            </DialogTitle>
+            <DialogDescription>
+              {bulkDialog?.action === "delete" 
+                ? "Are you sure you want to permanently delete these items? This cannot be undone."
+                : "These items will be hidden from public view but not deleted."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="bulk-note">Moderation note (optional)</Label>
+            <Textarea
+              id="bulk-note"
+              placeholder="Add a reason for this bulk action..."
+              value={moderationNote}
+              onChange={(e) => setModerationNote(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDialog(null)}>Cancel</Button>
+            <Button
+              variant={bulkDialog?.action === "delete" ? "destructive" : "default"}
+              onClick={handleBulkAction}
+              disabled={bulkProcessing}
+            >
+              {bulkProcessing ? "Processing..." : `${bulkDialog?.action === "delete" ? "Delete" : "Hide"} All`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -459,6 +635,8 @@ export function ContentModeration() {
 function VideoCard({
   video,
   isHidden = false,
+  selected = false,
+  onSelect,
   onView,
   onHide,
   onRestore,
@@ -467,6 +645,8 @@ function VideoCard({
 }: {
   video: VideoItem;
   isHidden?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
   onView: () => void;
   onHide?: () => void;
   onRestore?: () => void;
@@ -474,7 +654,10 @@ function VideoCard({
   formatCount: (count: number) => string;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
+    <div className={`flex items-center gap-3 p-3 bg-card rounded-lg border ${selected ? "ring-2 ring-primary" : "border-border"}`}>
+      {onSelect && (
+        <Checkbox checked={selected} onCheckedChange={onSelect} />
+      )}
       <div
         className="w-16 h-24 bg-secondary rounded overflow-hidden flex-shrink-0 cursor-pointer relative"
         onClick={onView}
