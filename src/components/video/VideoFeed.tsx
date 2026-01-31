@@ -7,9 +7,10 @@ import { Loader2 } from "lucide-react";
 
 interface VideoFeedProps {
   feedType?: "foryou" | "following";
+  onScrollDirectionChange?: (isScrollingUp: boolean) => void;
 }
 
-export function VideoFeed({ feedType = "foryou" }: VideoFeedProps) {
+export function VideoFeed({ feedType = "foryou", onScrollDirectionChange }: VideoFeedProps) {
   const { user } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -21,7 +22,8 @@ export function VideoFeed({ feedType = "foryou" }: VideoFeedProps) {
   }>({ likes: new Set(), bookmarks: new Set(), following: new Set() });
   
   const containerRef = useRef<HTMLDivElement>(null);
-
+  const lastScrollTop = useRef(0);
+  const lastTouchY = useRef(0);
   const fetchVideos = useCallback(async () => {
     setLoading(true);
     
@@ -115,6 +117,32 @@ export function VideoFeed({ feedType = "foryou" }: VideoFeedProps) {
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < videos.length) {
       setCurrentIndex(newIndex);
     }
+
+    // Detect scroll direction
+    if (onScrollDirectionChange) {
+      const isScrollingUp = scrollTop < lastScrollTop.current;
+      onScrollDirectionChange(isScrollingUp);
+    }
+    lastScrollTop.current = scrollTop;
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    lastTouchY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!onScrollDirectionChange) return;
+    
+    const currentY = e.touches[0].clientY;
+    const diff = lastTouchY.current - currentY;
+    
+    // Threshold to avoid micro-movements
+    if (Math.abs(diff) > 20) {
+      // Swiping up (scrolling down content) = hide bars
+      // Swiping down (scrolling up content) = show bars
+      onScrollDirectionChange(diff < 0);
+      lastTouchY.current = currentY;
+    }
   };
 
   if (loading) {
@@ -143,6 +171,8 @@ export function VideoFeed({ feedType = "foryou" }: VideoFeedProps) {
     <div
       ref={containerRef}
       onScroll={handleScroll}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
     >
       {videos.map((video, index) => (

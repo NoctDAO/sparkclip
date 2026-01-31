@@ -3,11 +3,17 @@ import { cn } from "@/lib/utils";
 interface FeedTabsProps {
   activeTab: "foryou" | "following";
   onTabChange: (tab: "foryou" | "following") => void;
+  isVisible?: boolean;
 }
 
-export function FeedTabs({ activeTab, onTabChange }: FeedTabsProps) {
+export function FeedTabs({ activeTab, onTabChange, isVisible = true }: FeedTabsProps) {
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center pt-4 pb-2">
+    <div 
+      className={cn(
+        "fixed top-0 left-0 right-0 z-50 flex items-center justify-center pt-4 pb-2 transition-transform duration-300",
+        !isVisible && "-translate-y-full"
+      )}
+    >
       <div className="flex items-center gap-4">
         <button
           onClick={() => onTabChange("following")}
