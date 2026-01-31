@@ -346,7 +346,15 @@ export default function Profile() {
               >
                 {isFollowing ? "Following" : "Follow"}
               </Button>
-              <Button variant="secondary" className="flex-1 font-semibold">
+              <Button 
+                variant="secondary" 
+                className="flex-1 font-semibold"
+                onClick={async () => {
+                  if (!userId) return;
+                  // Navigate to messages - we'll use a query param to start conversation
+                  navigate(`/messages?startWith=${userId}`);
+                }}
+              >
                 Message
               </Button>
               <DropdownMenu>
