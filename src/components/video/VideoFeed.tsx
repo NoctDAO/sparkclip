@@ -8,9 +8,14 @@ import { Loader2 } from "lucide-react";
 interface VideoFeedProps {
   feedType?: "foryou" | "following";
   onScrollDirectionChange?: (isScrollingUp: boolean) => void;
+  bottomNavVisible?: boolean;
 }
 
-export function VideoFeed({ feedType = "foryou", onScrollDirectionChange }: VideoFeedProps) {
+export function VideoFeed({
+  feedType = "foryou",
+  onScrollDirectionChange,
+  bottomNavVisible = true,
+}: VideoFeedProps) {
   const { user } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -183,6 +188,7 @@ export function VideoFeed({ feedType = "foryou", onScrollDirectionChange }: Vide
             isLiked={userInteractions.likes.has(video.id)}
             isBookmarked={userInteractions.bookmarks.has(video.id)}
             isFollowing={userInteractions.following.has(video.user_id)}
+            bottomNavVisible={bottomNavVisible}
           />
         </div>
       ))}
