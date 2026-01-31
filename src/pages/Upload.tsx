@@ -9,12 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SoundPicker } from "@/components/sounds/SoundPicker";
 import { Sound } from "@/types/video";
+import { useContentModeration } from "@/hooks/useContentModeration";
 
 export default function Upload() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { moderateContent } = useContentModeration();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -75,10 +77,14 @@ export default function Upload() {
 
     setUploading(true);
 
+    let uploadedFileName: string | null = null;
+    let createdVideoId: string | null = null;
+
     try {
       // Upload video to storage
       const fileExt = videoFile.name.split(".").pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      uploadedFileName = fileName;
 
       const { error: uploadError } = await supabase.storage
         .from("videos")
@@ -98,23 +104,78 @@ export default function Upload() {
         .map((tag) => tag.replace("#", ""));
 
       // Create video record
-      const { error: insertError } = await supabase.from("videos").insert({
-        user_id: user.id,
-        video_url: publicUrl,
-        caption: caption.trim() || null,
-        hashtags: hashtagArray.length > 0 ? hashtagArray : null,
-        sound_id: selectedSound?.id || null,
-      });
+      const { data: videoData, error: insertError } = await supabase
+        .from("videos")
+        .insert({
+          user_id: user.id,
+          video_url: publicUrl,
+          caption: caption.trim() || null,
+          hashtags: hashtagArray.length > 0 ? hashtagArray : null,
+          sound_id: selectedSound?.id || null,
+        })
+        .select("id")
+        .single();
 
       if (insertError) throw insertError;
+      createdVideoId = videoData.id;
+
+      // Build content for moderation (caption + hashtags)
+      const contentToModerate = [
+        caption.trim(),
+        hashtagArray.map((t) => `#${t}`).join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      // Run moderation if there's text content
+      if (contentToModerate) {
+        const moderationResult = await moderateContent({
+          content: contentToModerate,
+          content_type: "video",
+          content_id: createdVideoId,
+        });
+
+        if (moderationResult.blocked) {
+          // Content blocked - rollback: delete video record and storage file
+          await supabase.from("videos").delete().eq("id", createdVideoId);
+          await supabase.storage.from("videos").remove([uploadedFileName]);
+
+          toast({
+            title: "Video couldn't be posted",
+            description:
+              "Your video may violate our community guidelines. Please review and try again.",
+            variant: "destructive",
+          });
+          setUploading(false);
+          return;
+        }
+
+        if (!moderationResult.safe) {
+          // Content flagged but not blocked - allow but notify
+          toast({
+            title: "Video posted!",
+            description: "It will be visible while our team reviews it.",
+          });
+          navigate("/");
+          return;
+        }
+      }
 
       toast({ title: "Video uploaded successfully!" });
       navigate("/");
     } catch (error: any) {
-      toast({ 
-        title: "Upload failed", 
+      // Cleanup on error if we created anything
+      if (createdVideoId) {
+        await supabase.from("videos").delete().eq("id", createdVideoId);
+      }
+      if (uploadedFileName) {
+        await supabase.storage.from("videos").remove([uploadedFileName]);
+      }
+
+      toast({
+        title: "Upload failed",
         description: error.message,
-        variant: "destructive" 
+        variant: "destructive",
       });
     } finally {
       setUploading(false);
