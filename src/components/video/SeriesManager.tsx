@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, GripVertical, Eye, Trash2, Play, AlertTriangle, Pencil, Check, ImagePlus, Loader2 } from "lucide-react";
+import { X, GripVertical, Eye, Trash2, Play, AlertTriangle, Pencil, Check, ImagePlus, Loader2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
+import { AddVideoToSeriesSheet } from "@/components/video/AddVideoToSeriesSheet";
 import { VideoSeries, Video } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -161,6 +162,9 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
   const [coverImageUrl, setCoverImageUrl] = useState(series.cover_image_url || "");
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  
+  // Add video state
+  const [showAddVideo, setShowAddVideo] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -532,6 +536,14 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
             </div>
 
             <div className="pt-4 border-t border-border mt-4 space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddVideo(true)}
+                className="w-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Existing Video
+              </Button>
               {hasChanges && (
                 <Button
                   onClick={handleSaveOrder}
@@ -554,6 +566,18 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
         )}
       </SheetContent>
     </Sheet>
+
+    {/* Add Video Sheet */}
+    <AddVideoToSeriesSheet
+      series={series}
+      open={showAddVideo}
+      onOpenChange={setShowAddVideo}
+      onVideoAdded={() => {
+        loadSeriesVideos();
+        onSeriesUpdated();
+      }}
+      existingVideoIds={videos.map((v) => v.id)}
+    />
     </>
   );
 }
