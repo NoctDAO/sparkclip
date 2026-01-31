@@ -1,161 +1,157 @@
 
-# AI Auto-Moderation Integration Plan
+# Video Series Feature Plan
 
 ## Overview
-This plan connects the existing `moderate-content` edge function to automatically analyze and flag potentially harmful content during video uploads and comment submissions. The AI moderation uses Lovable AI (Gemini) to detect policy violations like hate speech, harassment, spam, and adult content.
+This feature allows creators to upload longer stories by linking multiple short videos together as a series (Part 1, Part 2, Part 3, etc.). Each video remains a standalone clip, but viewers can easily navigate between parts in a series. This is perfect for storytelling, tutorials, or any content that spans multiple videos.
 
-## Current Architecture
+## How It Works
 
-The `moderate-content` edge function is already fully implemented with:
-- Keyword blocklist checking (fast, first pass)
-- AI analysis using Lovable AI (Gemini 2.5 Flash)
-- Automatic flagging to `content_flags` table
-- Returns `blocked: true` for immediate blocks, `safe: false` for flagged content
+### For Creators
+1. When uploading a new video, creators can either:
+   - Start a new series by giving it a title (e.g., "My Italy Trip")
+   - Add to an existing series they've created
+2. The part number is automatically assigned based on existing parts
+3. Creators can reorder parts or remove videos from a series later
+
+### For Viewers
+1. Videos that are part of a series show a "Part 1 of 3" indicator on the video
+2. Tapping the indicator opens a series panel showing all parts
+3. Viewers can swipe or tap to navigate between parts
+4. Series are displayed as a collection on the creator's profile
+
+## Database Changes
+
+A new `video_series` table will be created to manage series:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | Creator who owns the series |
+| title | text | Series title (e.g., "My Italy Trip") |
+| description | text (nullable) | Optional series description |
+| cover_video_id | uuid (nullable) | Which video's thumbnail to use as cover |
+| videos_count | integer | Number of videos in series (auto-updated) |
+| total_views | integer | Combined views across all parts |
+| created_at | timestamp | When series was created |
+| updated_at | timestamp | Last modification |
+
+The `videos` table will get new columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| series_id | uuid (nullable) | Reference to video_series table |
+| series_order | integer (nullable) | Order within the series (1, 2, 3...) |
 
 ## Implementation Steps
 
-### Step 1: Create Moderation Utility Hook
+### Step 1: Database Migration
+Create the `video_series` table with appropriate RLS policies:
+- Users can create their own series
+- Users can update/delete their own series
+- Anyone can view series (for public videos)
 
-Create a reusable hook to call the moderation edge function from anywhere in the app.
+Add `series_id` and `series_order` columns to the `videos` table.
 
-**File: `src/hooks/useContentModeration.ts`**
+### Step 2: Update Type Definitions
+Add new TypeScript interfaces for `VideoSeries` in the types file.
 
-This hook will:
-- Provide a `moderateContent()` function that calls the edge function
-- Accept content, content type (video/comment), and content ID
-- Return moderation results including whether content is safe, blocked, or flagged
-- Handle errors gracefully (fail open - allow content if moderation fails)
+### Step 3: Create Series Management Hook
+A `useVideoSeries` hook that provides:
+- `createSeries(title, description?)` - Create a new series
+- `addToSeries(videoId, seriesId)` - Add a video to a series
+- `removeFromSeries(videoId)` - Remove video from its series
+- `reorderSeries(seriesId, videoIds[])` - Reorder videos in a series
+- `deleteSeries(seriesId)` - Delete a series (videos remain but are unlinked)
+- `getUserSeries(userId)` - Fetch all series for a user
 
-### Step 2: Integrate into Video Upload
+### Step 4: Update Upload Page
+Modify the upload flow to include:
+- A toggle/option to "Add to series"
+- Dropdown to select existing series or create new one
+- Series title input when creating new
+- Preview of which part number this will be
 
-**File: `src/pages/Upload.tsx`**
+### Step 5: Create Series Indicator Component
+A small overlay on videos showing "Part X of Y" that:
+- Displays on videos that belong to a series
+- Is tappable to open the series viewer
+- Shows series title on hover/long-press
 
-Modify the upload flow to:
-1. After video record is created, call moderation with caption + hashtags combined
-2. If content is **blocked** (matched blocking keyword):
-   - Delete the video record
-   - Remove uploaded video file from storage
-   - Show clear error message explaining content was not allowed
-3. If content is **flagged** (AI detected issues):
-   - Keep the video visible (innocent until proven guilty)
-   - Content appears in moderation queue for review
-   - Optional: Show toast that video is under review
-4. If content is **safe**:
-   - Proceed normally with success message
+### Step 6: Create Series Viewer Sheet
+A bottom sheet component that:
+- Shows all videos in the series as a horizontal scrollable list
+- Highlights the current video
+- Allows tapping to jump to any part
+- Shows series title and total views
 
-### Step 3: Integrate into Comment Submission
+### Step 7: Update Video Info Component
+Modify VideoInfo to:
+- Display the series indicator when a video belongs to a series
+- Include series data in the video fetch queries
 
-**File: `src/components/video/CommentsSheet.tsx`**
+### Step 8: Update Profile Page
+Add a new tab or section for "Series":
+- Shows all series created by the user
+- Each series displays as a card with cover image, title, and part count
+- Tapping opens the series viewer
 
-Modify the comment flow to:
-1. Before inserting comment, call moderation with comment content
-2. If content is **blocked**:
-   - Do not insert the comment
-   - Show error message that comment violates guidelines
-3. If content is **flagged**:
-   - Insert comment normally (visible to users)
-   - Flag is created in moderation queue
-4. If content is **safe**:
-   - Proceed normally
-
-### Step 4: Update Edge Function CORS Headers
-
-**File: `supabase/functions/moderate-content/index.ts`**
-
-Add the additional CORS headers required for Lovable Cloud compatibility.
-
-## Technical Details
-
-### Moderation Hook API
-
-```typescript
-interface ModerationResult {
-  safe: boolean;
-  blocked: boolean;
-  issues: string[];
-  confidence: number;
-  flag_type: string | null;
-}
-
-const { moderateContent, isLoading } = useContentModeration();
-
-// Usage
-const result = await moderateContent({
-  content: "text to check",
-  content_type: "video" | "comment",
-  content_id: "uuid-of-content"
-});
-```
-
-### Upload Flow Diagram
-
-```text
-User clicks Post
-       |
-       v
-Upload video file to storage
-       |
-       v
-Create video record in database
-       |
-       v
-Call moderation with caption + hashtags
-       |
-       +-- Blocked? --> Delete video & file --> Show error
-       |
-       +-- Flagged? --> Show success (content under review)
-       |
-       +-- Safe? --> Show success
-```
-
-### Comment Flow Diagram
-
-```text
-User submits comment
-       |
-       v
-Call moderation with comment content
-       |
-       +-- Blocked? --> Show error, don't insert
-       |
-       v
-Insert comment into database
-       |
-       +-- Flagged? --> Auto-created in content_flags
-       |
-       +-- Safe? --> Show normally
-```
+### Step 9: Update Video Feed
+Modify video fetching to include series information when available.
 
 ## Files to Create/Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/hooks/useContentModeration.ts` | Create | Reusable moderation hook |
-| `src/pages/Upload.tsx` | Modify | Add moderation after video creation |
-| `src/components/video/CommentsSheet.tsx` | Modify | Add moderation before comment insert |
-| `supabase/functions/moderate-content/index.ts` | Modify | Update CORS headers |
+| Database migration | Create | Add video_series table and update videos table |
+| `src/types/video.ts` | Modify | Add VideoSeries interface |
+| `src/hooks/useVideoSeries.ts` | Create | Series management hook |
+| `src/pages/Upload.tsx` | Modify | Add series selection UI |
+| `src/components/video/SeriesIndicator.tsx` | Create | Part X of Y overlay |
+| `src/components/video/SeriesViewer.tsx` | Create | Bottom sheet with all parts |
+| `src/components/video/VideoInfo.tsx` | Modify | Include series indicator |
+| `src/components/video/VideoCard.tsx` | Modify | Show series indicator |
+| `src/components/video/VideoFeed.tsx` | Modify | Fetch series data |
+| `src/pages/Profile.tsx` | Modify | Add series tab/section |
+| `src/pages/VideoPage.tsx` | Modify | Include series data |
 
-## User Experience
+## User Experience Flow
 
-### Video Upload
-- User sees "Posting..." during upload and moderation
-- If blocked: "Your video couldn't be posted because it may violate our community guidelines"
-- If flagged: "Video posted! It will be visible while our team reviews it"
-- If safe: "Video uploaded successfully!"
+```text
+CREATOR FLOW:
+Upload video --> Toggle "Add to series" --> Select/Create series --> Post
+                                                    |
+                         +------------+-------------+
+                         |                          |
+                   Select existing            Create new
+                   series from list           (enter title)
 
-### Comments
-- If blocked: "This comment couldn't be posted. Please revise and try again"
-- If flagged/safe: Normal behavior (comment appears immediately)
+VIEWER FLOW:
+Watch video --> See "Part 1 of 3" --> Tap indicator --> Series panel opens
+                                                               |
+                                              See all parts, tap to navigate
+```
 
-## Edge Cases Handled
+## Visual Design
 
-1. **Moderation service fails**: Content is allowed (fail open) to prevent blocking legitimate users
-2. **Empty caption/hashtags**: Skip moderation for videos with no text content
-3. **Rate limiting**: Moderation is called after rate limit check for comments
-4. **Cleanup on block**: If video is blocked post-upload, both the database record and storage file are deleted
+### Series Indicator (on video)
+- Small pill in bottom-left area: "Part 1 of 3 - My Italy Trip"
+- Semi-transparent background
+- Tap to open series viewer
+
+### Series Viewer (bottom sheet)
+- Horizontal scrollable thumbnails
+- Current video highlighted with border
+- Series title at top
+- Total views displayed
+- Close button
+
+### Upload Page Addition
+- New section below caption: "Series"
+- Toggle or button to enable
+- Dropdown for existing series + "Create new" option
+- Shows part number preview: "This will be Part 4"
 
 ## Security Considerations
-
-- Moderation runs server-side in edge function with service role key
-- Users cannot bypass moderation by calling the API directly (content_flags require admin review)
-- Failed moderation gracefully degrades to allow content (prevents denial of service)
+- RLS ensures users can only create/edit their own series
+- Series visibility follows the visibility of its videos
+- Deleting a series doesn't delete the videos (just unlinks them)
