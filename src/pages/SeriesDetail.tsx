@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft, Eye, Heart, MessageCircle, Share2, Play, Layers, Pencil } from "lucide-react";
+import { ArrowLeft, Eye, Heart, MessageCircle, Share2, Play, Layers, Pencil, Copy, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SeriesManager } from "@/components/video/SeriesManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoSeries, Video, Profile } from "@/types/video";
 
@@ -15,6 +16,7 @@ export default function SeriesDetail() {
   const { seriesId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const { getSeriesById, getSeriesVideos } = useVideoSeries();
 
   const [series, setSeries] = useState<VideoSeries | null>(null);
@@ -22,6 +24,7 @@ export default function SeriesDetail() {
   const [creator, setCreator] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showManager, setShowManager] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Combined stats
   const [totalLikes, setTotalLikes] = useState(0);
@@ -89,6 +92,36 @@ export default function SeriesDetail() {
     });
   };
 
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/series/${seriesId}`;
+    const shareData = {
+      title: series?.title || "Check out this series",
+      text: series?.description || `Watch all ${series?.videos_count} parts of ${series?.title}`,
+      url: shareUrl,
+    };
+
+    // Try native share first
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        // User cancelled or share failed, fall back to clipboard
+        if ((error as Error).name === "AbortError") return;
+      }
+    }
+
+    // Fallback to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast({ title: "Link copied to clipboard" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast({ title: "Failed to copy link", variant: "destructive" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -116,16 +149,28 @@ export default function SeriesDetail() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="font-semibold truncate mx-4">Series</h1>
-            {isOwner && (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowManager(true)}
+                onClick={handleShare}
               >
-                <Pencil className="w-5 h-5" />
+                {copied ? (
+                  <Check className="w-5 h-5 text-green-500" />
+                ) : (
+                  <Share2 className="w-5 h-5" />
+                )}
               </Button>
-            )}
-            {!isOwner && <div className="w-10" />}
+              {isOwner && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowManager(true)}
+                >
+                  <Pencil className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
           </div>
         </header>
 
