@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { TrendingSounds } from "@/components/sounds/TrendingSounds";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, Profile } from "@/types/video";
 
@@ -85,6 +86,9 @@ export default function Discover() {
 
       {!searchQuery.trim() ? (
         <>
+          {/* Trending Sounds */}
+          <TrendingSounds />
+
           {/* Trending Hashtags */}
           <div className="p-4">
             <h2 className="font-bold text-lg mb-3 flex items-center gap-2">

@@ -19,6 +19,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [likedVideos, setLikedVideos] = useState<Video[]>([]);
+  const [savedVideos, setSavedVideos] = useState<Video[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +33,7 @@ export default function Profile() {
         checkFollowing();
         if (isOwnProfile) {
           fetchLikedVideos();
+          fetchSavedVideos();
         }
       }
     }
@@ -74,6 +76,21 @@ export default function Profile() {
 
     if (data) {
       setLikedVideos(data.map((item: any) => item.videos) as Video[]);
+    }
+  };
+
+  const fetchSavedVideos = async () => {
+    const { data } = await supabase
+      .from("bookmarks")
+      .select(`
+        video_id,
+        videos:video_id (*)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setSavedVideos(data.map((item: any) => item.videos).filter(Boolean) as Video[]);
     }
   };
 
@@ -320,10 +337,28 @@ export default function Profile() {
             </TabsContent>
 
             <TabsContent value="saved" className="mt-0">
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Bookmark className="w-12 h-12 mb-2" />
-                <p>No saved videos yet</p>
-              </div>
+              {savedVideos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Bookmark className="w-12 h-12 mb-2" />
+                  <p>No saved videos yet</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-0.5">
+                  {savedVideos.map((video) => (
+                    <div 
+                      key={video.id} 
+                      className="aspect-[9/16] bg-secondary cursor-pointer"
+                      onClick={() => navigate(`/?video=${video.id}`)}
+                    >
+                      {video.thumbnail_url ? (
+                        <img src={video.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <video src={video.video_url} className="w-full h-full object-cover" muted />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </>
         )}
