@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Share2, Bookmark, Eye, Flag } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Eye, Flag, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ReportDialog } from "@/components/ReportDialog";
+import { AddToSeriesSheet } from "@/components/video/AddToSeriesSheet";
+
 interface VideoActionsProps {
   videoId: string;
+  videoUserId?: string;
   initialLikes: number;
   initialComments: number;
   initialShares: number;
@@ -20,6 +23,7 @@ interface VideoActionsProps {
 
 export function VideoActions({
   videoId,
+  videoUserId,
   initialLikes,
   initialComments,
   initialShares,
@@ -36,6 +40,9 @@ export function VideoActions({
   const [bookmarked, setBookmarked] = useState(isBookmarked);
   const [likesCount, setLikesCount] = useState(initialLikes);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showSeriesSheet, setShowSeriesSheet] = useState(false);
+
+  const isOwnVideo = user?.id === videoUserId;
 
   // Sync with parent state
   useEffect(() => {
@@ -204,6 +211,19 @@ export function VideoActions({
         </span>
       </button>
 
+      {/* Add to Series - only for own videos */}
+      {isOwnVideo && (
+        <button
+          onClick={() => setShowSeriesSheet(true)}
+          className="flex flex-col items-center gap-0.5"
+        >
+          <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+            <Layers className="w-6 h-6 text-foreground drop-shadow-md" />
+          </div>
+          <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Series</span>
+        </button>
+      )}
+
       {/* Report */}
       <button
         onClick={() => setShowReportDialog(true)}
@@ -220,6 +240,13 @@ export function VideoActions({
         onOpenChange={setShowReportDialog}
         contentId={videoId}
         contentType="video"
+      />
+
+      {/* Add to Series Sheet */}
+      <AddToSeriesSheet
+        videoId={videoId}
+        open={showSeriesSheet}
+        onOpenChange={setShowSeriesSheet}
       />
     </div>
   );
