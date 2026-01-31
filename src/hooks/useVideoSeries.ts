@@ -134,6 +134,30 @@ export function useVideoSeries() {
     return true;
   }, [user, toast]);
 
+  const reorderSeries = useCallback(async (seriesId: string, videoIds: string[]): Promise<boolean> => {
+    if (!user) return false;
+
+    // Update each video's series_order
+    const updates = videoIds.map((videoId, index) => 
+      supabase
+        .from("videos")
+        .update({ series_order: index + 1 })
+        .eq("id", videoId)
+        .eq("series_id", seriesId)
+        .eq("user_id", user.id)
+    );
+
+    const results = await Promise.all(updates);
+    const hasError = results.some(r => r.error);
+
+    if (hasError) {
+      toast({ title: "Failed to reorder series", variant: "destructive" });
+      return false;
+    }
+
+    return true;
+  }, [user, toast]);
+
   const updateSeries = useCallback(async (
     seriesId: string, 
     updates: { title?: string; description?: string; cover_video_id?: string }
@@ -196,6 +220,7 @@ export function useVideoSeries() {
     getSeriesVideos,
     addToSeries,
     removeFromSeries,
+    reorderSeries,
     updateSeries,
     deleteSeries,
     getNextPartNumber,
