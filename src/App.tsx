@@ -18,6 +18,7 @@ import FollowList from "./pages/FollowList";
 import Sounds from "./pages/Sounds";
 import SoundDetail from "./pages/SoundDetail";
 import VideoPage from "./pages/VideoPage";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/sounds" element={<Sounds />} />
               <Route path="/sounds/:soundId" element={<SoundDetail />} />
               <Route path="/video/:videoId" element={<VideoPage />} />
+              <Route path="/analytics" element={<Analytics />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

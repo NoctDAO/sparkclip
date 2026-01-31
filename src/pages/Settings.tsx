@@ -10,6 +10,7 @@ import {
   FileText,
   LogOut,
   Trash2,
+  BarChart3,
 } from "lucide-react";
 import { SettingsItem } from "@/components/settings/SettingsItem";
 import { useAuth } from "@/hooks/useAuth";
@@ -81,6 +82,12 @@ export default function Settings() {
             label="Privacy"
             description="Manage your privacy settings"
             onClick={() => toast({ title: "Coming soon" })}
+          />
+          <SettingsItem
+            icon={BarChart3}
+            label="Analytics"
+            description="View your video performance"
+            onClick={() => navigate("/analytics")}
           />
         </div>
 
