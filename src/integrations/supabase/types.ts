@@ -257,6 +257,27 @@ export type Database = {
         }
         Relationships: []
       }
+      search_history: {
+        Row: {
+          created_at: string
+          id: string
+          query: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          query: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          query?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sound_favorites: {
         Row: {
           created_at: string
@@ -330,6 +351,68 @@ export type Database = {
           {
             foreignKeyName: "sounds_original_video_id_fkey"
             columns: ["original_video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trending_cache: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          id: string
+          period: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          entity_id: string
+          entity_type: string
+          id?: string
+          period: string
+          score?: number
+          updated_at?: string
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          period?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          interaction_type: string
+          user_id: string
+          video_id: string
+          watch_percentage: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interaction_type: string
+          user_id: string
+          video_id: string
+          watch_percentage?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interaction_type?: string
+          user_id?: string
+          video_id?: string
+          watch_percentage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_interactions_video_id_fkey"
+            columns: ["video_id"]
             isOneToOne: false
             referencedRelation: "videos"
             referencedColumns: ["id"]

@@ -11,7 +11,7 @@ export function BottomNav() {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Search, label: "Discover", path: "/discover" },
+    { icon: Search, label: "Search", path: "/search" },
     { icon: Plus, label: "Upload", path: "/upload", isUpload: true },
     { icon: MessageCircle, label: "Inbox", path: "/inbox", badge: unreadCount },
     { icon: User, label: "Profile", path: user ? `/profile/${user.id}` : "/auth" },
