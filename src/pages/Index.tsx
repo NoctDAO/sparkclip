@@ -106,7 +106,11 @@ const Index = () => {
 
       <div className="h-[var(--app-height)] w-full bg-background overflow-hidden">
         <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} isVisible={barsVisible} />
-        <VideoFeed feedType={activeTab} onScrollDirectionChange={handleScrollDirectionChange} />
+        <VideoFeed
+          feedType={activeTab}
+          onScrollDirectionChange={handleScrollDirectionChange}
+          bottomNavVisible={barsVisible}
+        />
         <BottomNav isVisible={barsVisible} />
       </div>
     </>

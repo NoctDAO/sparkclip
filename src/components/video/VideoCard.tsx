@@ -16,6 +16,7 @@ interface VideoCardProps {
   isLiked?: boolean;
   isBookmarked?: boolean;
   isFollowing?: boolean;
+  bottomNavVisible?: boolean;
 }
 
 export function VideoCard({ 
@@ -24,6 +25,7 @@ export function VideoCard({
   isLiked = false, 
   isBookmarked = false,
   isFollowing = false,
+  bottomNavVisible = true,
 }: VideoCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -37,7 +39,8 @@ export function VideoCard({
 
   // Keep overlays safely above the fixed bottom nav (and device safe-area)
   // Uses --ui-safe-margin which can be changed via Settings > Display
-  const bottomUiOffset = "calc(var(--ui-safe-margin) + var(--bottom-nav-height) + var(--safe-bottom))";
+  const navOffset = bottomNavVisible ? "var(--bottom-nav-height)" : "0px";
+  const bottomUiOffset = `calc(var(--ui-safe-margin) + ${navOffset} + var(--safe-bottom))`;
   
   const lastTapRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -190,7 +193,7 @@ export function VideoCard({
 
       {/* Actions (right side) */}
       <div
-        className="absolute pointer-events-auto z-10"
+        className="absolute pointer-events-auto z-10 transition-[bottom] duration-300 ease-out"
         style={{
           right: "calc(var(--safe-right) + 0.5rem)",
           bottom: bottomUiOffset,
@@ -211,7 +214,7 @@ export function VideoCard({
 
       {/* Info (bottom) */}
       <div
-        className="absolute right-16 pointer-events-auto z-10"
+        className="absolute right-16 pointer-events-auto z-10 transition-[bottom] duration-300 ease-out"
         style={{
           left: "calc(var(--safe-left) + 0.75rem)",
           bottom: bottomUiOffset,
