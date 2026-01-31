@@ -19,6 +19,7 @@ export interface VideoSeries {
   title: string;
   description: string | null;
   cover_video_id: string | null;
+  cover_image_url: string | null;
   videos_count: number;
   total_views: number;
   created_at: string;

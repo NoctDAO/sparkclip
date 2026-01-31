@@ -132,8 +132,16 @@ export default function SeriesDetail() {
         {/* Series Info */}
         <div className="p-4 border-b border-border">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-              <Layers className="w-8 h-8 text-primary" />
+            <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {series.cover_image_url ? (
+                <img 
+                  src={series.cover_image_url} 
+                  alt={series.title} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Layers className="w-8 h-8 text-primary" />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold">{series.title}</h2>
