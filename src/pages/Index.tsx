@@ -104,7 +104,7 @@ const Index = () => {
         </script>
       </Helmet>
 
-      <div className="h-screen w-full bg-background overflow-hidden">
+      <div className="h-[var(--app-height)] w-full bg-background overflow-hidden">
         <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} isVisible={barsVisible} />
         <VideoFeed feedType={activeTab} onScrollDirectionChange={handleScrollDirectionChange} />
         <BottomNav isVisible={barsVisible} />
