@@ -82,12 +82,26 @@ export function VideoFeed({
         soundMap = new Map(sounds?.map(s => [s.id, s]) || []);
       }
       
+      // Fetch series for videos that have series_id
+      const seriesIds = [...new Set(data.filter(v => v.series_id).map(v => v.series_id))];
+      let seriesMap = new Map();
+      
+      if (seriesIds.length > 0) {
+        const { data: seriesData } = await supabase
+          .from("video_series")
+          .select("*")
+          .in("id", seriesIds);
+        
+        seriesMap = new Map(seriesData?.map(s => [s.id, s]) || []);
+      }
+      
       const videosWithData = data
         .filter(video => !blockedUserIds.has(video.user_id)) // Filter out blocked users
         .map(video => ({
           ...video,
           profiles: profileMap.get(video.user_id) || null,
           sound: video.sound_id ? soundMap.get(video.sound_id) || null : null,
+          series: video.series_id ? seriesMap.get(video.series_id) || null : null,
         }));
       
       setVideos(videosWithData as Video[]);

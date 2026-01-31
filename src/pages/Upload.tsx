@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Upload as UploadIcon, X, Hash, Music, Ban } from "lucide-react";
+import { ArrowLeft, Upload as UploadIcon, X, Hash, Music, Ban, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SoundPicker } from "@/components/sounds/SoundPicker";
-import { Sound } from "@/types/video";
+import { SeriesPicker } from "@/components/video/SeriesPicker";
+import { Sound, VideoSeries } from "@/types/video";
 import { useContentModeration } from "@/hooks/useContentModeration";
 import { useBanStatus } from "@/hooks/useBanStatus";
 
@@ -28,6 +29,9 @@ export default function Upload() {
   const [uploading, setUploading] = useState(false);
   const [selectedSound, setSelectedSound] = useState<Sound | null>(null);
   const [soundPickerOpen, setSoundPickerOpen] = useState(false);
+  const [selectedSeries, setSelectedSeries] = useState<VideoSeries | null>(null);
+  const [seriesPickerOpen, setSeriesPickerOpen] = useState(false);
+  const [nextPartNumber, setNextPartNumber] = useState<number>(1);
 
   // Load sound from URL params if navigating from sound detail page
   useEffect(() => {
@@ -114,6 +118,8 @@ export default function Upload() {
           caption: caption.trim() || null,
           hashtags: hashtagArray.length > 0 ? hashtagArray : null,
           sound_id: selectedSound?.id || null,
+          series_id: selectedSeries?.id || null,
+          series_order: selectedSeries ? nextPartNumber : null,
         })
         .select("id")
         .single();
@@ -358,6 +364,47 @@ export default function Upload() {
           />
         </div>
 
+        {/* Series Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Series
+          </label>
+          {selectedSeries ? (
+            <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
+              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Layers className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{selectedSeries.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  This will be Part {nextPartNumber}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedSeries(null);
+                  setNextPartNumber(1);
+                }}
+                className="text-destructive"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setSeriesPickerOpen(true)}
+              className="w-full justify-start gap-2"
+            >
+              <Layers className="w-4 h-4" />
+              Add to series
+            </Button>
+          )}
+        </div>
+
         {/* Upload Button */}
         <Button
           onClick={handleUpload}
@@ -367,6 +414,16 @@ export default function Upload() {
           {uploading ? "Uploading..." : "Post"}
         </Button>
       </div>
+
+      <SeriesPicker
+        open={seriesPickerOpen}
+        onOpenChange={setSeriesPickerOpen}
+        selectedSeries={selectedSeries}
+        onSelectSeries={(series, nextPart) => {
+          setSelectedSeries(series);
+          setNextPartNumber(nextPart);
+        }}
+      />
 
       <SoundPicker
         open={soundPickerOpen}
