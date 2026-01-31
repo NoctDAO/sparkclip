@@ -321,6 +321,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ip_rate_limits: {
+        Row: {
+          action_type: string
+          attempts: number
+          created_at: string
+          id: string
+          ip_address: string
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          ip_address: string
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          ip_address?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -1070,6 +1097,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_ip_rate_limits: { Args: never; Returns: undefined }
       get_feed_videos: {
         Args: {
           p_blocked_user_ids?: string[]
