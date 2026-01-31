@@ -51,6 +51,10 @@ export default {
         share: "hsl(var(--share))",
         comment: "hsl(var(--comment))",
         bookmark: "hsl(var(--bookmark))",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
