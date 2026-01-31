@@ -36,7 +36,8 @@ export function VideoCard({
   const [showSwipeHint, setShowSwipeHint] = useState(false);
 
   // Keep overlays safely above the fixed bottom nav (and device safe-area)
-  const bottomUiOffset = "calc(1.5rem + var(--bottom-nav-height) + var(--safe-bottom))";
+  // Uses --ui-safe-margin which can be changed via Settings > Display
+  const bottomUiOffset = "calc(var(--ui-safe-margin) + var(--bottom-nav-height) + var(--safe-bottom))";
   
   const lastTapRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);

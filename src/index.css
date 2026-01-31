@@ -62,6 +62,7 @@
 
     /* UI sizing tokens (keep overlays inside viewport) */
     --bottom-nav-height: 3.75rem; /* 60px - slightly taller to ensure clearance */
+    --ui-safe-margin: 1.5rem; /* default medium; adjusted via useUiSafeMargin hook */
   }
 
   .dark {
