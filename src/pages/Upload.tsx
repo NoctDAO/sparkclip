@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Upload as UploadIcon, X, Hash, Music } from "lucide-react";
+import { ArrowLeft, Upload as UploadIcon, X, Hash, Music, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SoundPicker } from "@/components/sounds/SoundPicker";
 import { Sound } from "@/types/video";
 import { useContentModeration } from "@/hooks/useContentModeration";
+import { useBanStatus } from "@/hooks/useBanStatus";
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function Upload() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { moderateContent } = useContentModeration();
+  const { isBanned, banInfo } = useBanStatus(user?.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -189,6 +191,40 @@ export default function Upload() {
       fileInputRef.current.value = "";
     }
   };
+
+  // Show banned user message
+  if (isBanned) {
+    return (
+      <div className="min-h-[var(--app-height)] bg-background text-foreground">
+        <header className="flex items-center justify-between p-4 border-b border-border">
+          <button onClick={() => navigate(-1)} className="p-2">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="font-bold text-lg">New video</h1>
+          <div className="w-10" />
+        </header>
+        <div className="flex flex-col items-center justify-center p-8 text-center h-[60vh]">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <Ban className="w-8 h-8 text-destructive" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Account Suspended</h2>
+          <p className="text-muted-foreground mb-4 max-w-sm">
+            You cannot upload videos while your account is suspended.
+          </p>
+          {banInfo?.reason && (
+            <p className="text-sm text-muted-foreground mb-2">
+              Reason: {banInfo.reason}
+            </p>
+          )}
+          {banInfo?.expires_at && (
+            <p className="text-sm text-muted-foreground">
+              Expires: {new Date(banInfo.expires_at).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[var(--app-height)] bg-background text-foreground">

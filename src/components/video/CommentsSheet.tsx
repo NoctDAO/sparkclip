@@ -14,6 +14,7 @@ import { CommentItem } from "@/components/comments/CommentItem";
 import { MentionInput } from "@/components/comments/MentionInput";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useContentModeration } from "@/hooks/useContentModeration";
+import { useBanStatus } from "@/hooks/useBanStatus";
 
 interface CommentsSheetProps {
   videoId: string;
@@ -29,6 +30,7 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
   const { createNotification } = useNotifications();
   const { moderateContent } = useContentModeration();
   const { canComment, settings: ownerPrivacy } = useUserPrivacy(videoOwnerId);
+  const { isBanned, banInfo } = useBanStatus(user?.id);
   const { blockedUsers, isUserBlocked } = useBlockedUsers();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -303,7 +305,19 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
 
         {/* Comment input */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border">
-          {isBlockedByOwner ? (
+          {isBanned ? (
+            <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground py-2">
+              <div className="flex items-center gap-2">
+                <Ban className="w-4 h-4 text-destructive" />
+                <span className="text-sm">Account suspended</span>
+              </div>
+              {banInfo?.expires_at && (
+                <span className="text-xs">
+                  Until {new Date(banInfo.expires_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          ) : isBlockedByOwner ? (
             <div className="flex items-center justify-center gap-2 text-muted-foreground py-2">
               <Ban className="w-4 h-4" />
               <span className="text-sm">You can't comment on this video</span>
