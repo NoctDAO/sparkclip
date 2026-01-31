@@ -18,6 +18,7 @@ import Discover from "./pages/Discover";
 import Search from "./pages/Search";
 import HashtagPage from "./pages/HashtagPage";
 import Inbox from "./pages/Inbox";
+import Messages from "./pages/Messages";
 import EditProfile from "./pages/EditProfile";
 import Settings from "./pages/Settings";
 import ChangePassword from "./pages/ChangePassword";
@@ -62,6 +63,8 @@ const App = () => {
                       <Route path="/search" element={<Search />} />
                       <Route path="/hashtag/:tag" element={<HashtagPage />} />
                       <Route path="/inbox" element={<Inbox />} />
+                      <Route path="/messages" element={<Messages />} />
+                      <Route path="/messages/:conversationId" element={<Messages />} />
                       <Route path="/edit-profile" element={<EditProfile />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/settings/password" element={<ChangePassword />} />
