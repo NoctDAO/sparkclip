@@ -1,114 +1,161 @@
 
-# Video Format Display - Auto-Detection with Letterboxing
+# Discovery & Engagement Features
 
 ## Overview
-This feature will automatically detect whether a video is vertical (TikTok-style) or horizontal (landscape) and display it appropriately. Landscape videos will be centered with black bars above and below (letterboxing), while vertical videos continue to fill the screen. Thumbnails in grids will remain uniform (9:16 ratio).
+Implement a complete discovery system with advanced search, trending content, personalized recommendations, and hashtag exploration.
 
-## Current State
-- Videos currently use `object-cover` which crops to fill the container
-- All videos assume 9:16 portrait format
-- No aspect ratio metadata is stored in the database
-- The `VideoPlayer` component renders all videos identically
+## Phase 1: Database Schema Updates
+We need to track engagement signals for recommendations:
 
-## Implementation Approach
+### New Tables:
+1. **user_interactions** - Track detailed engagement for recommendations
+   - user_id, video_id, interaction_type (view, like, share, complete), created_at, watch_percentage
 
-### 1. Detect Video Aspect Ratio at Runtime
-Since storing aspect ratio in the database would require changes to uploads and existing data, we'll detect aspect ratio dynamically when the video loads using the `loadedmetadata` event.
+2. **trending_cache** - Cache trending calculations (updated periodically)
+   - entity_type (hashtag, sound, video), entity_id, score, period (hourly, daily, weekly), updated_at
 
-```text
-+------------------+     +-------------------+     +------------------+
-| Video loads      | --> | Check width vs    | --> | Apply object-fit |
-| (loadedmetadata) |     | height ratio      |     | contain or cover |
-+------------------+     +-------------------+     +------------------+
-```
-
-### 2. Display Logic
-- **Portrait videos (height > width)**: Continue using `object-cover` to fill screen
-- **Landscape videos (width >= height)**: Use `object-contain` with centered positioning
-- **Square videos**: Treat as portrait (fill screen)
+### Index Additions:
+- Full-text search indexes on videos.caption, profiles.username, sounds.title
+- Indexes on hashtags array for faster lookups
 
 ---
 
-## Technical Changes
+## Phase 2: Advanced Search
 
-### File 1: `src/components/video/VideoPlayer.tsx`
-Add aspect ratio detection and conditional styling:
+### Features:
+- **Unified search bar** with autocomplete
+- **Tabbed results**: Videos, Users, Sounds, Hashtags
+- **Filters**: Date range, sort by (relevance, recent, popular)
+- **Search history** for logged-in users
 
-- Add `isLandscape` state to track video orientation
-- Listen to `loadedmetadata` event to detect `videoWidth` vs `videoHeight`
-- Conditionally apply `object-contain` (letterboxing) or `object-cover` (fill)
-- Ensure the background remains black for the letterbox bars
-
-```tsx
-// New state
-const [isLandscape, setIsLandscape] = useState(false);
-
-// In useEffect for loadedmetadata
-const handleLoadedMetadata = () => {
-  if (video.videoWidth >= video.videoHeight) {
-    setIsLandscape(true);
-  } else {
-    setIsLandscape(false);
-  }
-};
-
-// Video element class change
-<video
-  className={cn(
-    "w-full h-full",
-    isLandscape ? "object-contain" : "object-cover"
-  )}
-/>
-```
-
-### File 2: `src/components/video/VideoCard.tsx`
-Update the container background to ensure black bars appear correctly:
-
-- Ensure the video container has an explicit black background
-- This creates the letterbox effect for landscape videos
-
-### File 3: `src/pages/VideoPage.tsx`  
-Apply the same background treatment for the single video page view.
-
----
-
-## Visual Result
-
-**Portrait Video (9:16):**
+### Components:
 ```text
-+-------------------+
-|                   |
-|   +-----------+   |
-|   |  Video    |   |
-|   |  fills    |   |
-|   |  screen   |   |
-|   +-----------+   |
-|                   |
-+-------------------+
-```
-
-**Landscape Video (16:9):**
-```text
-+-------------------+
-|   Black bars      |
-+-------------------+
-|                   |
-|   Landscape       |
-|   Video Content   |
-|                   |
-+-------------------+
-|   Black bars      |
-+-------------------+
+src/components/search/
+├── SearchBar.tsx         # Main search input with autocomplete
+├── SearchResults.tsx     # Tabbed results container
+├── VideoResults.tsx      # Video grid with infinite scroll
+├── UserResults.tsx       # User list with follow buttons
+├── SoundResults.tsx      # Sound cards
+├── HashtagResults.tsx    # Hashtag chips with video counts
+└── SearchHistory.tsx     # Recent searches
 ```
 
 ---
 
-## What Stays the Same
-- **Thumbnail grids**: Profile, Discover, and search results will continue showing uniform 9:16 thumbnails using `object-cover`
-- **Upload flow**: No changes needed - videos work with any aspect ratio
-- **Database**: No schema changes required
+## Phase 3: Trending Section
 
-## Files to Modify
-1. `src/components/video/VideoPlayer.tsx` - Add aspect ratio detection and conditional object-fit
-2. `src/components/video/VideoCard.tsx` - Ensure black background for letterboxing
-3. `src/pages/VideoPage.tsx` - Apply consistent background treatment
+### Features:
+- **Trending Now** carousel on Discover page
+- **Trending Hashtags** with video counts
+- **Trending Sounds** with usage counts
+- **Trending Creators** (rising profiles)
+
+### Components:
+```text
+src/components/trending/
+├── TrendingSection.tsx      # Container for all trending
+├── TrendingHashtags.tsx     # Horizontal scroll of hashtags
+├── TrendingVideos.tsx       # Featured video carousel
+└── TrendingCreators.tsx     # Creator cards
+```
+
+---
+
+## Phase 4: Recommendation Algorithm
+
+### Signals (weighted):
+1. **Watch completion** (highest weight) - Videos watched >75%
+2. **Likes** - Explicit positive signal
+3. **Follows** - Content from followed creators
+4. **Hashtag affinity** - Hashtags user engages with
+5. **Sound affinity** - Sounds user engages with
+6. **Recency** - Newer content boosted
+
+### Implementation:
+- Edge function `get-recommendations` calculates personalized feed
+- Falls back to trending for new/anonymous users
+- Caches recommendations per user (refreshed on scroll)
+
+### Feed Types:
+- **For You** - Personalized recommendations
+- **Following** - Only from followed creators (existing)
+
+---
+
+## Phase 5: Hashtag Exploration
+
+### Features:
+- **Hashtag detail page** (`/hashtag/:tag`)
+- Video count and related hashtags
+- Videos sorted by recent/popular
+- "Use this sound" style button for hashtags
+
+### Components:
+```text
+src/pages/HashtagPage.tsx     # Full hashtag exploration
+src/components/HashtagChip.tsx # Clickable hashtag with count
+```
+
+---
+
+## File Changes Summary
+
+### New Files:
+- `src/pages/Search.tsx` - Search page
+- `src/pages/HashtagPage.tsx` - Hashtag detail page
+- `src/components/search/*` - Search components
+- `src/components/trending/*` - Trending components
+- `src/hooks/useSearch.ts` - Search hook with debounce
+- `src/hooks/useRecommendations.ts` - Recommendation fetching
+- `supabase/functions/get-recommendations/index.ts` - Recommendation engine
+
+### Modified Files:
+- `src/pages/Discover.tsx` - Add trending section
+- `src/pages/Index.tsx` - Integrate recommendation feed
+- `src/App.tsx` - Add new routes
+- `src/components/layout/BottomNav.tsx` - Search icon link
+
+### Database Migrations:
+- Add full-text search indexes
+- Create user_interactions table
+- Create trending_cache table
+- Add search history support
+
+---
+
+## Visual Layout
+
+**Discover Page:**
+```text
++----------------------------------+
+|  🔍 Search...                    |
++----------------------------------+
+|  🔥 Trending Hashtags            |
+|  [#dance] [#comedy] [#fyp] →     |
++----------------------------------+
+|  📈 Trending Videos              |
+|  [Video] [Video] [Video] →       |
++----------------------------------+
+|  🎵 Trending Sounds              |
+|  [Sound] [Sound] [Sound] →       |
++----------------------------------+
+|  ⭐ Rising Creators              |
+|  [Creator] [Creator] →           |
++----------------------------------+
+```
+
+**Search Results:**
+```text
++----------------------------------+
+|  🔍 "dance"                   ✕  |
++----------------------------------+
+| [Videos] [Users] [Sounds] [Tags] |
++----------------------------------+
+|  +-------+  +-------+  +-------+ |
+|  | Video |  | Video |  | Video | |
+|  +-------+  +-------+  +-------+ |
+|  +-------+  +-------+  +-------+ |
+|  | Video |  | Video |  | Video | |
+|  +-------+  +-------+  +-------+ |
++----------------------------------+
+```
