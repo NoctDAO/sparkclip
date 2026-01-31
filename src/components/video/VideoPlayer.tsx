@@ -49,13 +49,11 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
     };
 
     const incrementViewCount = async () => {
-      await supabase.rpc('increment_view_count', { video_id: videoId }).catch(() => {
-        // Fallback to direct update if RPC doesn't exist
-        supabase
-          .from('videos')
-          .update({ views_count: supabase.rpc('coalesce', { val: 'views_count', default_val: 0 }) })
-          .eq('id', videoId);
-      });
+      try {
+        await supabase.rpc('increment_view_count', { video_id: videoId });
+      } catch {
+        // Silent fail - view count is not critical
+      }
     };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
