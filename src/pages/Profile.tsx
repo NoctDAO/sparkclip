@@ -482,8 +482,8 @@ export default function Profile() {
                   <button
                     className="w-full text-left"
                     onClick={() => {
-                      // Navigate to first video in series
-                      navigate(`/?series=${series.id}`);
+                      // Navigate to series detail page
+                      navigate(`/series/${series.id}`);
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
