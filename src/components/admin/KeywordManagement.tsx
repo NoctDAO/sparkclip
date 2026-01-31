@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Search, AlertTriangle, Download, Upload } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Plus, Trash2, Search, AlertTriangle, Download, Upload, CheckSquare, Square, XSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,6 +56,8 @@ export function KeywordManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   
   // New keyword form state
   const [newKeyword, setNewKeyword] = useState("");
@@ -62,6 +65,14 @@ export function KeywordManagement() {
   const [newAction, setNewAction] = useState("flag");
   const [isRegex, setIsRegex] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const filteredKeywords = useMemo(() => keywords.filter(k =>
+    k.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    k.category.toLowerCase().includes(searchQuery.toLowerCase())
+  ), [keywords, searchQuery]);
+
+  const allSelected = filteredKeywords.length > 0 && filteredKeywords.every(k => selectedIds.has(k.id));
+  const someSelected = selectedIds.size > 0;
 
   useEffect(() => {
     fetchKeywords();
@@ -248,10 +259,46 @@ export function KeywordManagement() {
     }
   };
 
-  const filteredKeywords = keywords.filter(k =>
-    k.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    k.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredKeywords.map(k => k.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    setBulkDeleting(true);
+    const { error } = await supabase
+      .from("moderation_keywords")
+      .delete()
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      toast({
+        title: "Bulk delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: `Deleted ${selectedIds.size} keywords` });
+      setKeywords(keywords.filter(k => !selectedIds.has(k.id)));
+      setSelectedIds(new Set());
+    }
+    setBulkDeleting(false);
+  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -414,18 +461,58 @@ export function KeywordManagement() {
             />
           </div>
 
+          {/* Bulk actions bar */}
+          {someSelected && (
+            <div className="flex items-center justify-between p-2 mb-4 rounded-lg bg-muted">
+              <span className="text-sm font-medium">
+                {selectedIds.size} selected
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  <XSquare className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  {bulkDeleting ? "Deleting..." : `Delete ${selectedIds.size}`}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {filteredKeywords.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {searchQuery ? "No matching keywords found" : "No keywords configured yet"}
             </div>
           ) : (
             <div className="space-y-2">
+              {/* Select all header */}
+              <div className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span>Select all ({filteredKeywords.length})</span>
+              </div>
               {filteredKeywords.map((keyword) => (
                 <div
                   key={keyword.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                  className={`flex items-center justify-between p-3 rounded-lg border bg-card ${selectedIds.has(keyword.id) ? "ring-2 ring-primary" : ""}`}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Checkbox
+                      checked={selectedIds.has(keyword.id)}
+                      onCheckedChange={() => toggleSelect(keyword.id)}
+                    />
                     <code className="px-2 py-1 bg-muted rounded text-sm font-mono truncate max-w-[200px]">
                       {keyword.keyword}
                     </code>
