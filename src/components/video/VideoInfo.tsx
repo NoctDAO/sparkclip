@@ -113,23 +113,23 @@ export function VideoInfo({
         </p>
       )}
 
-      {/* Sound info */}
+      {/* Sound info - ensure it doesn't overflow */}
       {sound ? (
         <Link 
           to={`/sounds/${sound.id}`}
-          className="flex items-center gap-1.5 group"
+          className="flex items-center gap-1.5 group overflow-hidden"
         >
-          <div className="w-3.5 h-3.5 flex items-center justify-center animate-spin" style={{ animationDuration: "3s" }}>
+          <div className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center animate-spin" style={{ animationDuration: "3s" }}>
             <Music className="w-3.5 h-3.5 text-foreground/80" />
           </div>
-          <span className="text-xs text-foreground/80 truncate max-w-[180px] group-hover:underline">
+          <span className="text-xs text-foreground/80 truncate group-hover:underline">
             {sound.title} - {sound.artist || "Unknown"}
           </span>
         </Link>
       ) : (
-        <div className="flex items-center gap-1.5">
-          <Music className="w-3.5 h-3.5 text-foreground/80" />
-          <span className="text-xs text-foreground/80 truncate max-w-[180px]">
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <Music className="w-3.5 h-3.5 flex-shrink-0 text-foreground/80" />
+          <span className="text-xs text-foreground/80 truncate">
             Original sound - {displayName || username || "user"}
           </span>
         </div>
