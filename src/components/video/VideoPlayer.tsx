@@ -1,20 +1,73 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Volume2, VolumeX, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VideoPlayerProps {
   src: string;
   isActive: boolean;
+  videoId?: string;
   className?: string;
 }
 
-export function VideoPlayer({ src, isActive, className }: VideoPlayerProps) {
+export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
+  const viewCountedRef = useRef(false);
+  const watchTimeRef = useRef(0);
+  const lastTimeRef = useRef(0);
+
+  // Track view after 3 seconds of watching
+  useEffect(() => {
+    if (!isActive || !videoId) {
+      watchTimeRef.current = 0;
+      lastTimeRef.current = 0;
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      if (viewCountedRef.current) return;
+      
+      const currentTime = video.currentTime;
+      // Only count forward progress, not seeks or loops
+      if (currentTime > lastTimeRef.current && currentTime - lastTimeRef.current < 1) {
+        watchTimeRef.current += currentTime - lastTimeRef.current;
+      }
+      lastTimeRef.current = currentTime;
+
+      if (watchTimeRef.current >= 3 && !viewCountedRef.current) {
+        viewCountedRef.current = true;
+        incrementViewCount();
+      }
+    };
+
+    const incrementViewCount = async () => {
+      await supabase.rpc('increment_view_count', { video_id: videoId }).catch(() => {
+        // Fallback to direct update if RPC doesn't exist
+        supabase
+          .from('videos')
+          .update({ views_count: supabase.rpc('coalesce', { val: 'views_count', default_val: 0 }) })
+          .eq('id', videoId);
+      });
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    return () => video.removeEventListener('timeupdate', handleTimeUpdate);
+  }, [isActive, videoId]);
+
+  // Reset view counted when video changes
+  useEffect(() => {
+    viewCountedRef.current = false;
+    watchTimeRef.current = 0;
+    lastTimeRef.current = 0;
+  }, [videoId]);
 
   useEffect(() => {
     const video = videoRef.current;
