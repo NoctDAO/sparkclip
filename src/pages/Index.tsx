@@ -1,14 +1,21 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { VideoFeed } from "@/components/video/VideoFeed";
 import { FeedTabs } from "@/components/layout/FeedTabs";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { useNavBarPreference } from "@/hooks/useNavBarPreference";
+import { useFeedPreference } from "@/hooks/useFeedPreference";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<"foryou" | "following">("foryou");
+  const { defaultTab } = useFeedPreference();
+  const [activeTab, setActiveTab] = useState<"foryou" | "following">(defaultTab);
   const [barsVisible, setBarsVisible] = useState(true);
   const { autoHideEnabled } = useNavBarPreference();
+
+  // Sync with preference on mount
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
 
   const handleScrollDirectionChange = useCallback((isScrollingUp: boolean) => {
     if (autoHideEnabled) {

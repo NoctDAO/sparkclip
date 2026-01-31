@@ -15,6 +15,8 @@ import {
 import { SettingsItem } from "@/components/settings/SettingsItem";
 import { UiMarginSetting } from "@/components/settings/UiMarginSetting";
 import { NavBarToggle } from "@/components/settings/NavBarToggle";
+import { SoundPreferenceToggle } from "@/components/settings/SoundPreferenceToggle";
+import { FeedPreferenceToggle } from "@/components/settings/FeedPreferenceToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -99,7 +101,16 @@ export default function Settings() {
             Display
           </h2>
           <NavBarToggle />
+          <FeedPreferenceToggle />
           <UiMarginSetting />
+        </div>
+
+        {/* Sound Section */}
+        <div className="mb-6">
+          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Sound
+          </h2>
+          <SoundPreferenceToggle />
         </div>
 
         {/* Notifications Section */}
