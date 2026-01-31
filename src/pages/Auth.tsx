@@ -22,16 +22,24 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = isSignUp 
+    const result = isSignUp 
       ? await signUp(email, password)
       : await signIn(email, password);
 
-    if (error) {
-      toast({
-        title: isSignUp ? "Sign up failed" : "Sign in failed",
-        description: error.message,
-        variant: "destructive",
-      });
+    if (result.error) {
+      if (result.isRateLimited) {
+        toast({
+          title: "Too many attempts",
+          description: result.error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: isSignUp ? "Sign up failed" : "Sign in failed",
+          description: result.error.message,
+          variant: "destructive",
+        });
+      }
     } else {
       toast({
         title: isSignUp ? "Welcome!" : "Welcome back!",
