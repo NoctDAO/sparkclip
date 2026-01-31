@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { X } from "lucide-react";
+import { X, Lock } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useRateLimit } from "@/hooks/useRateLimit";
+import { useUserPrivacy } from "@/hooks/useUserPrivacy";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Comment } from "@/types/video";
@@ -14,15 +15,17 @@ import { useNotifications } from "@/hooks/useNotifications";
 
 interface CommentsSheetProps {
   videoId: string;
+  videoOwnerId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProps) {
+export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: CommentsSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { checkRateLimit: checkCommentLimit } = useRateLimit("comment");
   const { createNotification } = useNotifications();
+  const { canComment, settings: ownerPrivacy } = useUserPrivacy(videoOwnerId);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
@@ -259,22 +262,33 @@ export function CommentsSheet({ videoId, open, onOpenChange }: CommentsSheetProp
 
         {/* Comment input */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border">
-          <MentionInput
-            value={newComment}
-            onChange={setNewComment}
-            onSubmit={handleSubmit}
-            placeholder={user ? "Add a comment..." : "Sign in to comment"}
-            disabled={!user}
-            loading={loading}
-            replyingTo={
-              replyingTo
-                ? {
-                    username: replyingTo.profiles?.username || "user",
-                    onCancel: cancelReply,
-                  }
-                : null
-            }
-          />
+          {!canComment() ? (
+            <div className="flex items-center justify-center gap-2 text-muted-foreground py-2">
+              <Lock className="w-4 h-4" />
+              <span className="text-sm">
+                {ownerPrivacy.comment_permission === "no_one"
+                  ? "Comments are turned off"
+                  : "Only followers can comment"}
+              </span>
+            </div>
+          ) : (
+            <MentionInput
+              value={newComment}
+              onChange={setNewComment}
+              onSubmit={handleSubmit}
+              placeholder={user ? "Add a comment..." : "Sign in to comment"}
+              disabled={!user}
+              loading={loading}
+              replyingTo={
+                replyingTo
+                  ? {
+                      username: replyingTo.profiles?.username || "user",
+                      onCancel: cancelReply,
+                    }
+                  : null
+              }
+            />
+          )}
         </div>
       </SheetContent>
     </Sheet>

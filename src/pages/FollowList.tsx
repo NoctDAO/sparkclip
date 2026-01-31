@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Search, X } from "lucide-react";
+import { ArrowLeft, Loader2, Search, X, Lock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserPrivacy } from "@/hooks/useUserPrivacy";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types/video";
 
@@ -18,6 +19,7 @@ export default function FollowList() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canViewFollowingList, canViewFollowersList, loading: privacyLoading } = useUserPrivacy(userId);
 
   const initialTab = searchParams.get("tab") === "following" ? "following" : "followers";
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -217,7 +219,21 @@ export default function FollowList() {
     </div>
   );
 
-  if (loading) {
+  const PrivateState = ({ type }: { type: "followers" | "following" }) => (
+    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+      <Lock className="w-12 h-12 mb-4" />
+      <p className="text-lg font-medium">
+        This list is private
+      </p>
+      <p className="text-sm mt-1 text-center px-4">
+        {type === "followers"
+          ? "This user has chosen to keep their followers list private."
+          : "This user has chosen to keep their following list private."}
+      </p>
+    </div>
+  );
+
+  if (loading || privacyLoading) {
     return (
       <div className="min-h-[var(--app-height)] bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-foreground" />
@@ -275,7 +291,9 @@ export default function FollowList() {
         </TabsList>
 
         <TabsContent value="followers" className="mt-0">
-          {followers.length === 0 ? (
+          {!canViewFollowersList() ? (
+            <PrivateState type="followers" />
+          ) : followers.length === 0 ? (
             <EmptyState type="followers" />
           ) : filteredFollowers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -292,7 +310,9 @@ export default function FollowList() {
         </TabsContent>
 
         <TabsContent value="following" className="mt-0">
-          {following.length === 0 ? (
+          {!canViewFollowingList() ? (
+            <PrivateState type="following" />
+          ) : following.length === 0 ? (
             <EmptyState type="following" />
           ) : filteredFollowing.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
