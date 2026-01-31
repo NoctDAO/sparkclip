@@ -10,6 +10,8 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Upload from "./pages/Upload";
 import Discover from "./pages/Discover";
+import Search from "./pages/Search";
+import HashtagPage from "./pages/HashtagPage";
 import Inbox from "./pages/Inbox";
 import EditProfile from "./pages/EditProfile";
 import Settings from "./pages/Settings";
@@ -37,6 +39,8 @@ const App = () => (
               <Route path="/profile/:userId" element={<Profile />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/discover" element={<Discover />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/hashtag/:tag" element={<HashtagPage />} />
               <Route path="/inbox" element={<Inbox />} />
               <Route path="/edit-profile" element={<EditProfile />} />
               <Route path="/settings" element={<Settings />} />
