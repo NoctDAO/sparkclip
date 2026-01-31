@@ -19,6 +19,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { SettingsItem } from "@/components/settings/SettingsItem";
+import { ChangeEmailDialog } from "@/components/settings/ChangeEmailDialog";
 import { UiMarginSetting } from "@/components/settings/UiMarginSetting";
 import { NavBarToggle } from "@/components/settings/NavBarToggle";
 import { SoundPreferenceToggle } from "@/components/settings/SoundPreferenceToggle";
@@ -55,6 +56,7 @@ export default function Settings() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -211,6 +213,12 @@ export default function Settings() {
             onClick={() => navigate("/edit-profile")}
           />
           <SettingsItem
+            icon={Mail}
+            label="Change email"
+            description={user?.email || "Update your email address"}
+            onClick={() => setShowEmailDialog(true)}
+          />
+          <SettingsItem
             icon={Lock}
             label="Change password"
             description="Update your password"
@@ -361,6 +369,14 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Change Email Dialog */}
+      {user?.email && (
+        <ChangeEmailDialog
+          open={showEmailDialog}
+          onOpenChange={setShowEmailDialog}
+          currentEmail={user.email}
+        />
+      )}
     </div>
   );
 }
