@@ -289,7 +289,7 @@ export default function VideoPage() {
 
       {/* Video Player with double-tap detection */}
       <div 
-        className="absolute inset-0"
+        className="absolute inset-0 bg-black"
         onClick={handleDoubleTap}
       >
         <VideoPlayer src={video.video_url} isActive={true} videoId={video.id} />
