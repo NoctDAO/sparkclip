@@ -172,8 +172,16 @@ export function SeriesPicker({ open, onOpenChange, selectedSeries, onSelectSerie
                             : "bg-secondary hover:bg-secondary/80"
                         }`}
                       >
-                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                          <Layers className="w-5 h-5 text-muted-foreground" />
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {series.cover_image_url ? (
+                            <img 
+                              src={series.cover_image_url} 
+                              alt={series.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Layers className="w-5 h-5 text-muted-foreground" />
+                          )}
                         </div>
                         <div className="flex-1 text-left">
                           <p className="font-medium">{series.title}</p>
