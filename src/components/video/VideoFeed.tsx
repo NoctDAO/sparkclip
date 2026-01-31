@@ -8,12 +8,14 @@ import { Loader2 } from "lucide-react";
 
 interface VideoFeedProps {
   feedType?: "foryou" | "following";
+  initialVideoId?: string;
   onScrollDirectionChange?: (isScrollingUp: boolean) => void;
   bottomNavVisible?: boolean;
 }
 
 export function VideoFeed({
   feedType = "foryou",
+  initialVideoId,
   onScrollDirectionChange,
   bottomNavVisible = true,
 }: VideoFeedProps) {
@@ -46,6 +48,54 @@ export function VideoFeed({
         .eq("follower_id", user.id);
 
       userIds = followingData?.map((f) => f.following_id) || [];
+    }
+
+    // If we have an initialVideoId, fetch it first
+    let initialVideo: Video | null = null;
+    if (initialVideoId) {
+      const { data: initialData } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("id", initialVideoId)
+        .single();
+      
+      if (initialData) {
+        // Fetch profile for initial video
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_id, username, display_name, avatar_url")
+          .eq("user_id", initialData.user_id)
+          .single();
+        
+        // Fetch sound if exists
+        let sound = null;
+        if (initialData.sound_id) {
+          const { data: soundData } = await supabase
+            .from("sounds")
+            .select("*")
+            .eq("id", initialData.sound_id)
+            .single();
+          sound = soundData;
+        }
+        
+        // Fetch series if exists
+        let series = null;
+        if (initialData.series_id) {
+          const { data: seriesData } = await supabase
+            .from("video_series")
+            .select("*")
+            .eq("id", initialData.series_id)
+            .single();
+          series = seriesData;
+        }
+        
+        initialVideo = {
+          ...initialData,
+          profiles: profile || null,
+          sound,
+          series,
+        } as Video;
+      }
     }
 
     let query = supabase
@@ -96,20 +146,26 @@ export function VideoFeed({
         seriesMap = new Map(seriesData?.map(s => [s.id, s]) || []);
       }
       
-      const videosWithData = data
+      let videosWithData = data
         .filter(video => !blockedUserIds.has(video.user_id)) // Filter out blocked users
         .map(video => ({
           ...video,
           profiles: profileMap.get(video.user_id) || null,
           sound: video.sound_id ? soundMap.get(video.sound_id) || null : null,
           series: video.series_id ? seriesMap.get(video.series_id) || null : null,
-        }));
+        })) as Video[];
       
-      setVideos(videosWithData as Video[]);
+      // If we have an initial video, put it first and remove any duplicate
+      if (initialVideo) {
+        videosWithData = videosWithData.filter(v => v.id !== initialVideo!.id);
+        videosWithData = [initialVideo, ...videosWithData];
+      }
+      
+      setVideos(videosWithData);
     }
     
     setLoading(false);
-  }, [feedType, user, blockedUserIds.size]);
+  }, [feedType, user, blockedUserIds.size, initialVideoId]);
 
   const fetchUserInteractions = useCallback(async () => {
     if (!user) return;
