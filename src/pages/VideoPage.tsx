@@ -190,6 +190,49 @@ export default function VideoPage() {
   const pageUrl = `${window.location.origin}/video/${video.id}`;
   const thumbnailUrl = video.thumbnail_url || video.video_url;
 
+  // JSON-LD structured data for video
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": pageTitle,
+    "description": pageDescription,
+    "thumbnailUrl": thumbnailUrl,
+    "uploadDate": video.created_at,
+    "contentUrl": video.video_url,
+    "embedUrl": pageUrl,
+    "interactionStatistic": [
+      {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/LikeAction",
+        "userInteractionCount": likesCount
+      },
+      {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/CommentAction",
+        "userInteractionCount": video.comments_count || 0
+      },
+      {
+        "@type": "InteractionCounter",
+        "interactionType": "https://schema.org/WatchAction",
+        "userInteractionCount": video.views_count || 0
+      }
+    ],
+    ...(profile && {
+      "author": {
+        "@type": "Person",
+        "name": profile.display_name || profile.username,
+        "url": `${window.location.origin}/profile/${profile.user_id}`
+      }
+    }),
+    ...(sound && {
+      "audio": {
+        "@type": "AudioObject",
+        "name": sound.title,
+        ...(sound.artist && { "byArtist": sound.artist })
+      }
+    })
+  };
+
   return (
     <>
       <Helmet>
@@ -216,6 +259,11 @@ export default function VideoPage() {
         
         {/* Additional SEO */}
         <link rel="canonical" href={pageUrl} />
+        
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
       </Helmet>
 
       <div className="fixed inset-0 bg-black">
