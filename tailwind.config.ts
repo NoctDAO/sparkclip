@@ -117,6 +117,10 @@ export default {
           "50%": { transform: "scale(0.95)" },
           "100%": { transform: "scale(1)" },
         },
+        "image-fade-in": {
+          "0%": { opacity: "0", transform: "scale(0.98)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -130,6 +134,7 @@ export default {
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "bounce-subtle": "bounce-subtle 0.3s ease-in-out",
         "press": "press 0.15s ease-in-out",
+        "image-fade-in": "image-fade-in 0.3s ease-out forwards",
       },
     },
   },

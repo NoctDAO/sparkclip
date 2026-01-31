@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { VideoThumbnail } from "@/components/video/VideoThumbnail";
+import { VideoGridSkeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -445,27 +447,21 @@ export default function Profile() {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-0.5">
-              {videos.map((video) => (
+              {videos.map((video, index) => (
                 <div 
                   key={video.id} 
-                  className="aspect-[9/16] bg-secondary cursor-pointer relative group"
-                  onClick={() => navigate(`/?video=${video.id}`)}
+                  className="relative group grid-item-hover"
                 >
-                  {video.thumbnail_url ? (
-                    <img 
-                      src={video.thumbnail_url} 
-                      alt="" 
-                      className="w-full h-full object-cover" 
-                    />
-                  ) : (
-                    <video 
-                      src={video.video_url} 
-                      className="w-full h-full object-cover"
-                      muted
-                    />
-                  )}
+                  <VideoThumbnail
+                    thumbnailUrl={video.thumbnail_url}
+                    videoUrl={video.video_url}
+                    alt={video.caption || "Video"}
+                    onClick={() => navigate(`/?video=${video.id}`)}
+                    className="rounded-sm"
+                    priority={index < 6}
+                  />
                   {/* View count overlay */}
-                  <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                  <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg pointer-events-none">
                     <Eye className="w-3 h-3" />
                     <span>{formatCount(video.views_count)}</span>
                   </div>

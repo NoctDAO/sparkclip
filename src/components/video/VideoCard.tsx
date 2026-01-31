@@ -372,8 +372,8 @@ export function VideoCard({
         </div>
       )}
 
-      {/* Video Overlay */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-transparent to-background/60" />
+      {/* Video Overlay - improved gradient for better text readability */}
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/20 via-transparent via-40% to-black/70" />
 
       {/* Actions (right side) */}
       <div

@@ -272,4 +272,37 @@
   .focus-ring {
     @apply focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow duration-150;
   }
+
+  /* Image/video quality utilities */
+  .img-loading {
+    @apply shimmer;
+  }
+
+  .img-loaded {
+    @apply animate-image-fade-in;
+  }
+
+  .aspect-video-9-16 {
+    aspect-ratio: 9 / 16;
+  }
+
+  .backdrop-quality {
+    @apply backdrop-blur-md bg-background/80;
+  }
+
+  /* Scroll fade edges for horizontal scroll containers */
+  .scroll-fade-edges {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 8px,
+      black calc(100% - 8px),
+      transparent
+    );
+  }
+
+  /* Grid hover effect */
+  .grid-item-hover {
+    @apply transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98];
+  }
 }
