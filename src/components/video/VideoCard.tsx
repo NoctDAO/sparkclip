@@ -5,6 +5,7 @@ import { VideoPlayer } from "./VideoPlayer";
 import { VideoActions } from "./VideoActions";
 import { VideoInfo } from "./VideoInfo";
 import { CommentsSheet } from "./CommentsSheet";
+import { SeriesViewer } from "./SeriesViewer";
 import { Video } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +31,7 @@ export function VideoCard({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
+  const [showSeriesViewer, setShowSeriesViewer] = useState(false);
   const [liked, setLiked] = useState(isLiked);
   const [likesCount, setLikesCount] = useState(video.likes_count);
   const [showHeartAnimation, setShowHeartAnimation] = useState(false);
@@ -229,6 +231,9 @@ export function VideoCard({
           hashtags={video.hashtags}
           isFollowing={isFollowing}
           sound={video.sound}
+          series={video.series}
+          seriesOrder={video.series_order}
+          onSeriesClick={() => setShowSeriesViewer(true)}
         />
       </div>
 
@@ -239,6 +244,16 @@ export function VideoCard({
         open={showComments}
         onOpenChange={setShowComments}
       />
+
+      {/* Series Viewer Sheet */}
+      {video.series && (
+        <SeriesViewer
+          series={video.series}
+          currentVideoId={video.id}
+          open={showSeriesViewer}
+          onOpenChange={setShowSeriesViewer}
+        />
+      )}
     </div>
   );
 }

@@ -13,6 +13,19 @@ export interface Sound {
   isFavorite?: boolean;
 }
 
+export interface VideoSeries {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  cover_video_id: string | null;
+  videos_count: number;
+  total_views: number;
+  created_at: string;
+  updated_at: string;
+  cover_video?: Video;
+}
+
 export interface Video {
   id: string;
   user_id: string;
@@ -25,6 +38,8 @@ export interface Video {
   shares_count: number;
   views_count: number;
   sound_id: string | null;
+  series_id: string | null;
+  series_order: number | null;
   created_at: string;
   profiles?: {
     username: string | null;
@@ -32,6 +47,7 @@ export interface Video {
     avatar_url: string | null;
   };
   sound?: Sound;
+  series?: VideoSeries;
 }
 
 export interface Comment {

@@ -713,6 +713,50 @@ export type Database = {
         }
         Relationships: []
       }
+      video_series: {
+        Row: {
+          cover_video_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          total_views: number
+          updated_at: string
+          user_id: string
+          videos_count: number
+        }
+        Insert: {
+          cover_video_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          total_views?: number
+          updated_at?: string
+          user_id: string
+          videos_count?: number
+        }
+        Update: {
+          cover_video_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          total_views?: number
+          updated_at?: string
+          user_id?: string
+          videos_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_series_cover_video_id_fkey"
+            columns: ["cover_video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_views: {
         Row: {
           completion_percentage: number | null
@@ -765,6 +809,8 @@ export type Database = {
           moderated_at: string | null
           moderated_by: string | null
           moderation_note: string | null
+          series_id: string | null
+          series_order: number | null
           shares_count: number | null
           sound_id: string | null
           thumbnail_url: string | null
@@ -783,6 +829,8 @@ export type Database = {
           moderated_at?: string | null
           moderated_by?: string | null
           moderation_note?: string | null
+          series_id?: string | null
+          series_order?: number | null
           shares_count?: number | null
           sound_id?: string | null
           thumbnail_url?: string | null
@@ -801,6 +849,8 @@ export type Database = {
           moderated_at?: string | null
           moderated_by?: string | null
           moderation_note?: string | null
+          series_id?: string | null
+          series_order?: number | null
           shares_count?: number | null
           sound_id?: string | null
           thumbnail_url?: string | null
@@ -810,6 +860,13 @@ export type Database = {
           visibility?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "videos_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "video_series"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "videos_sound_id_fkey"
             columns: ["sound_id"]

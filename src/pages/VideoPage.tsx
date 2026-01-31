@@ -6,10 +6,11 @@ import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoActions } from "@/components/video/VideoActions";
 import { VideoInfo } from "@/components/video/VideoInfo";
 import { CommentsSheet } from "@/components/video/CommentsSheet";
+import { SeriesViewer } from "@/components/video/SeriesViewer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, Profile, Sound } from "@/types/video";
+import { Video, Profile, Sound, VideoSeries } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,8 @@ export default function VideoPage() {
   const [video, setVideo] = useState<Video | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sound, setSound] = useState<Sound | null>(null);
+  const [series, setSeries] = useState<VideoSeries | null>(null);
+  const [showSeriesViewer, setShowSeriesViewer] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showComments, setShowComments] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -82,6 +85,19 @@ export default function VideoPage() {
 
       if (soundData) {
         setSound(soundData as Sound);
+      }
+    }
+
+    // Fetch series if exists
+    if (data.series_id) {
+      const { data: seriesData } = await supabase
+        .from("video_series")
+        .select("*")
+        .eq("id", data.series_id)
+        .maybeSingle();
+
+      if (seriesData) {
+        setSeries(seriesData as VideoSeries);
       }
     }
 
@@ -343,6 +359,9 @@ export default function VideoPage() {
           hashtags={video.hashtags}
           isFollowing={isFollowing}
           sound={sound || undefined}
+          series={series || undefined}
+          seriesOrder={video.series_order}
+          onSeriesClick={() => setShowSeriesViewer(true)}
         />
       </div>
 
@@ -353,6 +372,16 @@ export default function VideoPage() {
         open={showComments}
         onOpenChange={setShowComments}
       />
+
+      {/* Series Viewer Sheet */}
+      {series && (
+        <SeriesViewer
+          series={series}
+          currentVideoId={video.id}
+          open={showSeriesViewer}
+          onOpenChange={setShowSeriesViewer}
+        />
+      )}
       </div>
     </>
   );

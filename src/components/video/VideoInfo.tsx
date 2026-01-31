@@ -6,7 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Sound } from "@/types/video";
+import { Sound, VideoSeries } from "@/types/video";
+import { SeriesIndicator } from "./SeriesIndicator";
 
 interface VideoInfoProps {
   userId: string;
@@ -17,6 +18,9 @@ interface VideoInfoProps {
   hashtags: string[] | null;
   isFollowing?: boolean;
   sound?: Sound | null;
+  series?: VideoSeries | null;
+  seriesOrder?: number | null;
+  onSeriesClick?: () => void;
 }
 
 export function VideoInfo({
@@ -28,6 +32,9 @@ export function VideoInfo({
   hashtags,
   isFollowing = false,
   sound,
+  series,
+  seriesOrder,
+  onSeriesClick,
 }: VideoInfoProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -69,6 +76,14 @@ export function VideoInfo({
 
   return (
     <div className="flex flex-col gap-2 max-w-[85%]">
+      {/* Series Indicator */}
+      {series && seriesOrder && (
+        <SeriesIndicator
+          series={series}
+          currentOrder={seriesOrder}
+          onClick={onSeriesClick}
+        />
+      )}
       {/* User info */}
       <div className="flex items-center gap-2">
         <Link to={`/profile/${userId}`}>
