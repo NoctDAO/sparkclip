@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, Profile, Sound } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 
 export interface HashtagResult {
   tag: string;
@@ -17,6 +18,7 @@ export interface SearchResults {
 
 export function useSearch(query: string, debounceMs = 300) {
   const { user } = useAuth();
+  const { blockedUsers } = useBlockedUsers();
   const [results, setResults] = useState<SearchResults>({
     videos: [],
     users: [],
@@ -25,6 +27,9 @@ export function useSearch(query: string, debounceMs = 300) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  
+  // Get blocked user IDs for filtering
+  const blockedUserIds = new Set(blockedUsers.map(b => b.blocked_user_id));
 
   // Debounced search
   useEffect(() => {
@@ -132,9 +137,15 @@ export function useSearch(query: string, debounceMs = 300) {
         .sort((a, b) => b.videoCount - a.videoCount)
         .slice(0, 20);
 
+      // Filter out blocked users from results
+      const filteredVideos = ((videosRes.data || []) as Video[])
+        .filter(v => !blockedUserIds.has(v.user_id));
+      const filteredUsers = ((usersRes.data || []) as Profile[])
+        .filter(u => !blockedUserIds.has(u.user_id));
+
       setResults({
-        videos: (videosRes.data || []) as Video[],
-        users: (usersRes.data || []) as Profile[],
+        videos: filteredVideos,
+        users: filteredUsers,
         sounds: (soundsRes.data || []) as Sound[],
         hashtags,
       });
