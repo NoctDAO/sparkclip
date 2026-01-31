@@ -135,6 +135,11 @@
     background: var(--gradient-primary);
   }
 
+  /* Safe padding for pages with bottom nav */
+  .pb-safe-nav {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem);
+  }
+
   .animate-heart {
     animation: heart-pop 0.3s ease-in-out;
   }

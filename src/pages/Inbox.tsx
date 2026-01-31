@@ -145,7 +145,7 @@ export default function Inbox() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center pb-20">
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center pb-safe-nav">
         <Bell className="w-16 h-16 text-muted-foreground mb-4" />
         <h2 className="text-xl font-bold mb-2">Activity</h2>
         <p className="text-muted-foreground text-center mb-6 max-w-xs">
@@ -173,7 +173,7 @@ export default function Inbox() {
   const filteredNotifications = filterNotifications(activeTab);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="min-h-screen bg-background text-foreground pb-safe-nav">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border">
         <button onClick={() => navigate(-1)} className="p-2">

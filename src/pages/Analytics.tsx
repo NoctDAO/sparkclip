@@ -224,7 +224,7 @@ export default function Analytics() {
         <meta name="description" content="View your video performance analytics" />
       </Helmet>
 
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-safe-nav">
         {/* Header */}
         <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
           <div className="flex items-center justify-between p-4">
