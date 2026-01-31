@@ -508,6 +508,30 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action_type: string
+          id: string
+          request_count: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          id?: string
+          request_count?: number
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          id?: string
+          request_count?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           content_id: string
@@ -1030,7 +1054,22 @@ export type Database = {
       }
     }
     Functions: {
+      can_follow: { Args: never; Returns: boolean }
+      can_like: { Args: never; Returns: boolean }
       can_message_user: { Args: { target_user_id: string }; Returns: boolean }
+      can_post_comment: { Args: never; Returns: boolean }
+      can_send_message: { Args: never; Returns: boolean }
+      can_submit_report: { Args: never; Returns: boolean }
+      can_upload_video: { Args: never; Returns: boolean }
+      check_rate_limit: {
+        Args: {
+          p_action_type: string
+          p_max_requests: number
+          p_user_id: string
+          p_window_minutes: number
+        }
+        Returns: boolean
+      }
       get_feed_videos: {
         Args: {
           p_blocked_user_ids?: string[]
