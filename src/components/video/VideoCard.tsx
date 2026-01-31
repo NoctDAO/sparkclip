@@ -189,7 +189,7 @@ export function VideoCard({
         className="absolute pointer-events-auto z-10"
         style={{
           right: "calc(var(--safe-right) + 0.5rem)",
-          bottom: "calc(1rem + var(--bottom-nav-height) + var(--safe-bottom))",
+          bottom: "calc(0.75rem + var(--bottom-nav-height) + var(--safe-bottom))",
         }}
       >
         <VideoActions
@@ -210,7 +210,7 @@ export function VideoCard({
         className="absolute right-16 pointer-events-auto z-10"
         style={{
           left: "calc(var(--safe-left) + 0.75rem)",
-          bottom: "calc(1rem + var(--bottom-nav-height) + var(--safe-bottom))",
+          bottom: "calc(0.75rem + var(--bottom-nav-height) + var(--safe-bottom))",
         }}
       >
         <VideoInfo
