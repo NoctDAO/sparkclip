@@ -292,7 +292,7 @@ export default function VideoPage() {
         className="absolute inset-0"
         onClick={handleDoubleTap}
       >
-        <VideoPlayer src={video.video_url} isActive={true} />
+        <VideoPlayer src={video.video_url} isActive={true} videoId={video.id} />
       </div>
 
       {/* Double-tap heart animation */}
