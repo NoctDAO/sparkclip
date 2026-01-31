@@ -1,161 +1,160 @@
 
-# Discovery & Engagement Features
+# Premium UI Refinement
 
 ## Overview
-Implement a complete discovery system with advanced search, trending content, personalized recommendations, and hashtag exploration.
+Redesign the video feed UI to be more premium, compact, and immersive - taking inspiration from TikTok's refined aesthetic while reducing visual clutter.
 
-## Phase 1: Database Schema Updates
-We need to track engagement signals for recommendations:
+## Current Issues (from screenshots)
+1. **Action buttons** are too large with bulky circular backgrounds (p-3 + rounded-full + bg-secondary)
+2. **Bottom navigation** takes up too much vertical space (h-16)
+3. **Video info section** has excessive gaps and spacing
+4. **Top feed tabs** could be more minimal
+5. **Icon sizes** and padding are oversized
 
-### New Tables:
-1. **user_interactions** - Track detailed engagement for recommendations
-   - user_id, video_id, interaction_type (view, like, share, complete), created_at, watch_percentage
+## Changes Summary
 
-2. **trending_cache** - Cache trending calculations (updated periodically)
-   - entity_type (hashtag, sound, video), entity_id, score, period (hourly, daily, weekly), updated_at
+### 1. VideoActions Component - More Compact & Elegant
+**Before:** Large circular backgrounds (p-3), icons 7x7, gap-5 between items
+**After:** Smaller transparent buttons, icons 6x6, gap-4 between items
 
-### Index Additions:
-- Full-text search indexes on videos.caption, profiles.username, sounds.title
-- Indexes on hashtags array for faster lookups
+Key changes:
+- Remove heavy circular backgrounds on action buttons
+- Use subtle backdrop blur instead of solid backgrounds
+- Reduce icon sizes from `w-7 h-7` to `w-6 h-6`
+- Reduce padding from `p-3` to `p-2`
+- Decrease gap between buttons from `gap-5` to `gap-4`
+- Make text smaller and lighter
 
----
+### 2. BottomNav - Slimmer Profile
+**Before:** Height h-16 (64px) with text labels
+**After:** Height h-14 (56px) with optional labels, smaller icons
 
-## Phase 2: Advanced Search
+Key changes:
+- Reduce nav height from `h-16` to `h-14`
+- Reduce icon sizes from `w-6 h-6` to `w-5 h-5`
+- Make upload button more compact
+- Add subtle backdrop blur for premium feel
+- Reduce text label size
 
-### Features:
-- **Unified search bar** with autocomplete
-- **Tabbed results**: Videos, Users, Sounds, Hashtags
-- **Filters**: Date range, sort by (relevance, recent, popular)
-- **Search history** for logged-in users
+### 3. FeedTabs - More Subtle Header
+**Before:** Larger text, more padding
+**After:** Slightly smaller text, backdrop blur, minimal padding
 
-### Components:
+Key changes:
+- Add backdrop blur for floating effect
+- Reduce vertical padding
+- Slightly smaller font size
+
+### 4. VideoInfo - Tighter Layout
+**Before:** Multiple gaps (gap-3), larger avatar, more spacing
+**After:** Reduced gaps (gap-2), smaller avatar, compact text
+
+Key changes:
+- Reduce gap between elements from `gap-3` to `gap-2`
+- Smaller avatar from `w-10 h-10` to `w-9 h-9`
+- Compact follow button
+- Tighter text spacing
+- Smaller sound info section
+
+### 5. VideoCard - Adjusted Positioning
+Position elements closer to edges to maximize video visibility:
+- Move actions closer to bottom edge
+- Reduce bottom padding for info section
+
+## Visual Comparison
+
+**Before:**
 ```text
-src/components/search/
-├── SearchBar.tsx         # Main search input with autocomplete
-├── SearchResults.tsx     # Tabbed results container
-├── VideoResults.tsx      # Video grid with infinite scroll
-├── UserResults.tsx       # User list with follow buttons
-├── SoundResults.tsx      # Sound cards
-├── HashtagResults.tsx    # Hashtag chips with video counts
-└── SearchHistory.tsx     # Recent searches
+┌────────────────────────────────────┐
+│      Following │ For You          │  <- 24px padding
+│                                    │
+│                          ┌───┐     │
+│                          │👁️ │     │  <- Large 52px buttons
+│                          │125K│    │
+│                          └───┘     │
+│                          ┌───┐     │
+│                          │❤️ │     │
+│                          │15K│     │
+│  ┌──┐                    └───┘     │
+│  │👤│ @user [Following]            │  <- 40px avatar
+│  │  │                              │
+│  └──┘                              │
+│  Caption text here...              │  <- gap-3 (12px)
+│  #hashtags                         │
+│  🎵 Sound info                     │
+├────────────────────────────────────┤
+│ 🏠    🔍    ➕    💬    👤         │  <- 64px height
+└────────────────────────────────────┘
 ```
 
----
-
-## Phase 3: Trending Section
-
-### Features:
-- **Trending Now** carousel on Discover page
-- **Trending Hashtags** with video counts
-- **Trending Sounds** with usage counts
-- **Trending Creators** (rising profiles)
-
-### Components:
+**After:**
 ```text
-src/components/trending/
-├── TrendingSection.tsx      # Container for all trending
-├── TrendingHashtags.tsx     # Horizontal scroll of hashtags
-├── TrendingVideos.tsx       # Featured video carousel
-└── TrendingCreators.tsx     # Creator cards
+┌────────────────────────────────────┐
+│      Following │ For You          │  <- 16px padding + blur
+│                                    │
+│                            👁️      │
+│                           125K     │  <- Smaller 40px buttons
+│                            ❤️      │
+│                           15.4K    │
+│                            💬      │
+│                            892     │
+│  ┌──┐ @user [Following]   🔖      │  <- 36px avatar, inline
+│  └──┘                     Save     │
+│  Caption text... #hashtags  ↗️     │  <- Compact, gap-2
+│  🎵 Sound - Artist         234     │
+├────────────────────────────────────┤
+│   🏠   🔍   ➕   💬   👤          │  <- 56px height + blur
+└────────────────────────────────────┘
 ```
 
----
+## Files to Modify
 
-## Phase 4: Recommendation Algorithm
+| File | Changes |
+|------|---------|
+| `src/components/video/VideoActions.tsx` | Smaller buttons, remove backgrounds, tighter spacing |
+| `src/components/video/VideoInfo.tsx` | Smaller avatar, reduced gaps, compact layout |
+| `src/components/video/VideoCard.tsx` | Adjust positioning (bottom-20 instead of bottom-24) |
+| `src/components/layout/BottomNav.tsx` | Reduce height, smaller icons, add blur |
+| `src/components/layout/FeedTabs.tsx` | Add backdrop blur, reduce padding |
+| `src/index.css` | Add glass morphism utilities if needed |
 
-### Signals (weighted):
-1. **Watch completion** (highest weight) - Videos watched >75%
-2. **Likes** - Explicit positive signal
-3. **Follows** - Content from followed creators
-4. **Hashtag affinity** - Hashtags user engages with
-5. **Sound affinity** - Sounds user engages with
-6. **Recency** - Newer content boosted
+## Technical Details
 
-### Implementation:
-- Edge function `get-recommendations` calculates personalized feed
-- Falls back to trending for new/anonymous users
-- Caches recommendations per user (refreshed on scroll)
+### VideoActions Changes
+```tsx
+// Before
+<div className="p-3 rounded-full bg-secondary/80">
+  <Eye className="w-7 h-7 text-foreground" />
+</div>
 
-### Feed Types:
-- **For You** - Personalized recommendations
-- **Following** - Only from followed creators (existing)
-
----
-
-## Phase 5: Hashtag Exploration
-
-### Features:
-- **Hashtag detail page** (`/hashtag/:tag`)
-- Video count and related hashtags
-- Videos sorted by recent/popular
-- "Use this sound" style button for hashtags
-
-### Components:
-```text
-src/pages/HashtagPage.tsx     # Full hashtag exploration
-src/components/HashtagChip.tsx # Clickable hashtag with count
+// After
+<div className="p-2 rounded-full backdrop-blur-sm">
+  <Eye className="w-6 h-6 text-foreground drop-shadow-md" />
+</div>
 ```
 
----
+### BottomNav Changes
+```tsx
+// Before
+<nav className="fixed bottom-0 ... bg-background border-t border-border">
+  <div className="flex items-center justify-around h-16">
 
-## File Changes Summary
-
-### New Files:
-- `src/pages/Search.tsx` - Search page
-- `src/pages/HashtagPage.tsx` - Hashtag detail page
-- `src/components/search/*` - Search components
-- `src/components/trending/*` - Trending components
-- `src/hooks/useSearch.ts` - Search hook with debounce
-- `src/hooks/useRecommendations.ts` - Recommendation fetching
-- `supabase/functions/get-recommendations/index.ts` - Recommendation engine
-
-### Modified Files:
-- `src/pages/Discover.tsx` - Add trending section
-- `src/pages/Index.tsx` - Integrate recommendation feed
-- `src/App.tsx` - Add new routes
-- `src/components/layout/BottomNav.tsx` - Search icon link
-
-### Database Migrations:
-- Add full-text search indexes
-- Create user_interactions table
-- Create trending_cache table
-- Add search history support
-
----
-
-## Visual Layout
-
-**Discover Page:**
-```text
-+----------------------------------+
-|  🔍 Search...                    |
-+----------------------------------+
-|  🔥 Trending Hashtags            |
-|  [#dance] [#comedy] [#fyp] →     |
-+----------------------------------+
-|  📈 Trending Videos              |
-|  [Video] [Video] [Video] →       |
-+----------------------------------+
-|  🎵 Trending Sounds              |
-|  [Sound] [Sound] [Sound] →       |
-+----------------------------------+
-|  ⭐ Rising Creators              |
-|  [Creator] [Creator] →           |
-+----------------------------------+
+// After
+<nav className="fixed bottom-0 ... bg-background/80 backdrop-blur-md border-t border-border/50">
+  <div className="flex items-center justify-around h-14">
 ```
 
-**Search Results:**
-```text
-+----------------------------------+
-|  🔍 "dance"                   ✕  |
-+----------------------------------+
-| [Videos] [Users] [Sounds] [Tags] |
-+----------------------------------+
-|  +-------+  +-------+  +-------+ |
-|  | Video |  | Video |  | Video | |
-|  +-------+  +-------+  +-------+ |
-|  +-------+  +-------+  +-------+ |
-|  | Video |  | Video |  | Video | |
-|  +-------+  +-------+  +-------+ |
-+----------------------------------+
+### FeedTabs Changes
+```tsx
+// Before
+<div className="fixed top-0 ... pt-4 pb-2">
+
+// After
+<div className="fixed top-0 ... pt-3 pb-1.5 bg-gradient-to-b from-background/80 to-transparent backdrop-blur-sm">
 ```
+
+## Summary
+- **~15% vertical space saved** on navigation elements
+- **Cleaner, more premium aesthetic** with glass morphism effects
+- **Better video visibility** with reduced overlay clutter
+- **Consistent with modern app design** trends (blur, transparency, compact)
