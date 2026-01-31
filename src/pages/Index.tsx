@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { VideoFeed } from "@/components/video/VideoFeed";
 import { FeedTabs } from "@/components/layout/FeedTabs";
@@ -7,6 +8,8 @@ import { useNavBarPreference } from "@/hooks/useNavBarPreference";
 import { useFeedPreference } from "@/hooks/useFeedPreference";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
+  const initialVideoId = searchParams.get("video");
   const { defaultTab } = useFeedPreference();
   const [activeTab, setActiveTab] = useState<"foryou" | "following">(defaultTab);
   const [barsVisible, setBarsVisible] = useState(true);
@@ -120,7 +123,9 @@ const Index = () => {
       <div className="h-[var(--app-height)] w-full bg-background overflow-hidden">
         <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} isVisible={barsVisible} />
         <VideoFeed
+          key={initialVideoId || activeTab}
           feedType={activeTab}
+          initialVideoId={initialVideoId || undefined}
           onScrollDirectionChange={handleScrollDirectionChange}
           bottomNavVisible={barsVisible}
         />
