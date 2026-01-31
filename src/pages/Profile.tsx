@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye, Lock } from "lucide-react";
+import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye, Lock, Ban, MoreHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { useUserPrivacy } from "@/hooks/useUserPrivacy";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile as ProfileType, Video } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +31,9 @@ export default function Profile() {
     isFollowing: privacyIsFollowing,
     refetch: refetchPrivacy 
   } = useUserPrivacy(userId);
+  const { blockUser, unblockUser, isUserBlocked } = useBlockedUsers();
+  
+  const isBlocked = userId ? isUserBlocked(userId) : false;
   
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -330,6 +335,39 @@ export default function Profile() {
               <Button variant="secondary" className="flex-1 font-semibold">
                 Message
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="icon">
+                    <MoreHorizontal className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      if (!userId) return;
+                      if (isBlocked) {
+                        const success = await unblockUser(userId);
+                        if (success) {
+                          toast({ title: "User unblocked" });
+                        } else {
+                          toast({ title: "Failed to unblock user", variant: "destructive" });
+                        }
+                      } else {
+                        const success = await blockUser(userId);
+                        if (success) {
+                          toast({ title: "User blocked" });
+                        } else {
+                          toast({ title: "Failed to block user", variant: "destructive" });
+                        }
+                      }
+                    }}
+                    className={isBlocked ? "" : "text-destructive focus:text-destructive"}
+                  >
+                    <Ban className="w-4 h-4 mr-2" />
+                    {isBlocked ? "Unblock" : "Block"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           )}
         </div>
