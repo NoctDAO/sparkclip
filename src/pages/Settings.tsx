@@ -236,6 +236,14 @@ export default function Settings() {
             description="View your video performance"
             onClick={() => navigate("/analytics")}
           />
+          {isAdmin && (
+            <SettingsItem
+              icon={Shield}
+              label="Admin Dashboard"
+              description="Manage users and content"
+              onClick={() => navigate("/admin")}
+            />
+          )}
           {(isAdmin || isModerator) && (
             <SettingsItem
               icon={ShieldAlert}
