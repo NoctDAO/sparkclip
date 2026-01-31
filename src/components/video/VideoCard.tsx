@@ -142,7 +142,7 @@ export function VideoCard({
     <div className="relative w-full h-full snap-start snap-always overflow-hidden">
       {/* Video Player with swipe and double-tap detection */}
       <div 
-        className="absolute inset-0 transition-transform duration-200 ease-out"
+        className="absolute inset-0 bg-black transition-transform duration-200 ease-out"
         style={{ transform: `translateX(${swipeOffset}px)` }}
         onClick={handleClick}
         onTouchStart={handleTouchStart}

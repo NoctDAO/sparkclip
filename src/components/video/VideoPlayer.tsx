@@ -17,6 +17,7 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
   const [progress, setProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
+  const [isLandscape, setIsLandscape] = useState(false);
 
   // Use analytics hook to track view events
   useVideoAnalytics({ videoId, isActive, videoRef });
@@ -48,12 +49,26 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
     const handleCanPlay = () => setIsBuffering(false);
     const handleSeeking = () => setIsBuffering(true);
     const handleSeeked = () => setIsBuffering(false);
+    const handleLoadedMetadata = () => {
+      // Detect aspect ratio: landscape if width >= height
+      if (video.videoWidth >= video.videoHeight) {
+        setIsLandscape(true);
+      } else {
+        setIsLandscape(false);
+      }
+    };
 
     video.addEventListener("waiting", handleWaiting);
     video.addEventListener("playing", handlePlaying);
     video.addEventListener("canplay", handleCanPlay);
     video.addEventListener("seeking", handleSeeking);
     video.addEventListener("seeked", handleSeeked);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+
+    // Check if metadata is already loaded
+    if (video.videoWidth > 0) {
+      handleLoadedMetadata();
+    }
 
     return () => {
       video.removeEventListener("waiting", handleWaiting);
@@ -61,6 +76,7 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("seeking", handleSeeking);
       video.removeEventListener("seeked", handleSeeked);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
     };
   }, []);
 
@@ -122,7 +138,10 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
       <video
         ref={videoRef}
         src={src}
-        className="w-full h-full object-cover"
+        className={cn(
+          "w-full h-full",
+          isLandscape ? "object-contain" : "object-cover"
+        )}
         loop
         muted={isMuted}
         playsInline
