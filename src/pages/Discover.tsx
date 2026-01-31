@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { Search, Eye } from "lucide-react";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { TrendingSection } from "@/components/trending/TrendingSection";
+import { TrendingSeries } from "@/components/trending/TrendingSeries";
 import { TrendingSounds } from "@/components/sounds/TrendingSounds";
 import { supabase } from "@/integrations/supabase/client";
 import { Video } from "@/types/video";
@@ -107,6 +108,9 @@ export default function Discover() {
 
       {/* Trending Section */}
       <TrendingSection />
+
+      {/* Popular Series */}
+      <TrendingSeries />
 
       {/* Trending Sounds */}
       <TrendingSounds />
