@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Search, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -69,7 +70,83 @@ export default function Discover() {
     "music", "comedy", "lifestyle", "food", "travel"
   ];
 
+  // SEO metadata
+  const pageTitle = "Discover | Explore Trending Videos, Sounds & Creators";
+  const pageDescription = "Discover trending videos, sounds, and creators. Explore viral content, popular hashtags, and find your next favorite creator.";
+  const pageUrl = `${window.location.origin}/discover`;
+
+  // JSON-LD structured data for ItemList
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Trending Videos",
+    "description": "Explore trending and popular videos",
+    "url": pageUrl,
+    "numberOfItems": trendingVideos.length,
+    "itemListElement": trendingVideos.map((video, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "item": {
+        "@type": "VideoObject",
+        "url": `${window.location.origin}/video/${video.id}`,
+        "name": video.caption || `Video ${video.id}`,
+        "thumbnailUrl": video.thumbnail_url || video.video_url,
+        "uploadDate": video.created_at,
+        "interactionStatistic": {
+          "@type": "InteractionCounter",
+          "interactionType": "https://schema.org/LikeAction",
+          "userInteractionCount": video.likes_count || 0
+        }
+      }
+    }))
+  };
+
+  // Hashtags structured data
+  const hashtagsJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Trending Hashtags",
+    "description": "Popular hashtags and topics",
+    "itemListElement": trendingHashtags.map((tag, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "item": {
+        "@type": "Thing",
+        "name": `#${tag}`,
+        "url": `${pageUrl}?q=${tag}`
+      }
+    }))
+  };
+
   return (
+    <>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content={pageUrl} />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href={pageUrl} />
+        
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(hashtagsJsonLd)}
+        </script>
+      </Helmet>
+
     <div className="min-h-screen bg-background text-foreground pb-20">
       {/* Search Bar */}
       <div className="sticky top-0 z-40 bg-background p-4 border-b border-border">
@@ -223,5 +300,6 @@ export default function Discover() {
 
       <BottomNav />
     </div>
+    </>
   );
 }
