@@ -24,6 +24,7 @@ import { UiMarginSetting } from "@/components/settings/UiMarginSetting";
 import { NavBarToggle } from "@/components/settings/NavBarToggle";
 import { SoundPreferenceToggle } from "@/components/settings/SoundPreferenceToggle";
 import { FeedPreferenceToggle } from "@/components/settings/FeedPreferenceToggle";
+import { SeriesAutoPlayToggle } from "@/components/settings/SeriesAutoPlayToggle";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -265,12 +266,13 @@ export default function Settings() {
           <UiMarginSetting />
         </div>
 
-        {/* Sound Section */}
+        {/* Playback Section */}
         <div className="mb-6">
           <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Sound
+            Playback
           </h2>
           <SoundPreferenceToggle />
+          <SeriesAutoPlayToggle />
         </div>
 
         {/* Notifications Section */}
