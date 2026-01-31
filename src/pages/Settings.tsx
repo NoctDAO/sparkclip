@@ -13,6 +13,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { SettingsItem } from "@/components/settings/SettingsItem";
+import { UiMarginSetting } from "@/components/settings/UiMarginSetting";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -89,6 +90,14 @@ export default function Settings() {
             description="View your video performance"
             onClick={() => navigate("/analytics")}
           />
+        </div>
+
+        {/* Display Section */}
+        <div className="mb-6">
+          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Display
+          </h2>
+          <UiMarginSetting />
         </div>
 
         {/* Notifications Section */}
