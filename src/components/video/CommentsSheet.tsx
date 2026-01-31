@@ -26,7 +26,7 @@ interface CommentsSheetProps {
 export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: CommentsSheetProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { checkRateLimit: checkCommentLimit } = useRateLimit("comment");
+  const { checkRateLimit: checkCommentLimit, handleRateLimitError } = useRateLimit("comment");
   const { createNotification } = useNotifications();
   const { moderateContent } = useContentModeration();
   const { canComment, settings: ownerPrivacy } = useUserPrivacy(videoOwnerId);
@@ -251,8 +251,11 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
       setNewComment("");
       setReplyingTo(null);
       fetchComments();
-    } else {
-      toast({ title: "Failed to post comment", variant: "destructive" });
+    } else if (error) {
+      // Check if it's a rate limit error and show friendly message
+      if (!handleRateLimitError(error, "comment")) {
+        toast({ title: "Failed to post comment", variant: "destructive" });
+      }
     }
 
     setLoading(false);

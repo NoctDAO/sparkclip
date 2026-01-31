@@ -38,7 +38,7 @@ export function VideoActions({
 }: VideoActionsProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { checkRateLimit: checkLikeLimit } = useRateLimit("like");
+  const { checkRateLimit: checkLikeLimit, handleRateLimitError } = useRateLimit("like");
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(isBookmarked);
   const [likesCount, setLikesCount] = useState(initialLikes);
@@ -82,7 +82,12 @@ export function VideoActions({
         .from("likes")
         .insert({ user_id: user.id, video_id: videoId });
 
-      if (!error) {
+      if (error) {
+        // Check if it's a rate limit error and show friendly message
+        if (!handleRateLimitError(error, "like")) {
+          toast({ title: "Failed to like video", variant: "destructive" });
+        }
+      } else {
         const newCount = likesCount + 1;
         setLiked(true);
         setLikesCount(newCount);

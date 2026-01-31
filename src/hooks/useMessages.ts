@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { useToast } from "./use-toast";
 import { Message } from "@/types/message";
+import { isRateLimitError, getRateLimitMessage } from "@/lib/rate-limit-errors";
 
 interface UseMessagesOptions {
   conversationId: string | null;
@@ -9,6 +11,7 @@ interface UseMessagesOptions {
 
 export function useMessages({ conversationId }: UseMessagesOptions) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -163,6 +166,13 @@ export function useMessages({ conversationId }: UseMessagesOptions) {
 
       if (error) {
         console.error("Error sending message:", error);
+        // Show user-friendly rate limit message
+        if (isRateLimitError(error)) {
+          const { title, description } = getRateLimitMessage("message");
+          toast({ title, description, variant: "destructive" });
+        } else {
+          toast({ title: "Failed to send message", description: "Please try again", variant: "destructive" });
+        }
         return false;
       }
 

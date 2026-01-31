@@ -1,5 +1,6 @@
 import { useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { isRateLimitError, getRateLimitMessage, inferActionType } from "@/lib/rate-limit-errors";
 
 interface RateLimitConfig {
   maxActions: number;
@@ -19,6 +20,7 @@ export function useRateLimit(actionType: keyof typeof defaultConfigs = "default"
   const actionsRef = useRef<number[]>([]);
   const config = defaultConfigs[actionType] || defaultConfigs.default;
 
+  // Client-side rate limit check (proactive)
   const checkRateLimit = useCallback((): boolean => {
     const now = Date.now();
     const windowStart = now - config.windowMs;
@@ -46,5 +48,21 @@ export function useRateLimit(actionType: keyof typeof defaultConfigs = "default"
     actionsRef.current = [];
   }, []);
 
-  return { checkRateLimit, resetLimit };
+  // Handle server-side rate limit errors (reactive)
+  const handleRateLimitError = useCallback((error: unknown, context?: string): boolean => {
+    if (isRateLimitError(error)) {
+      const actionTypeFromContext = context ? inferActionType(context) : actionType;
+      const { title, description } = getRateLimitMessage(actionTypeFromContext);
+      
+      toast({
+        title,
+        description,
+        variant: "destructive",
+      });
+      return true; // Error was handled
+    }
+    return false; // Not a rate limit error
+  }, [actionType, toast]);
+
+  return { checkRateLimit, resetLimit, handleRateLimitError, isRateLimitError };
 }
