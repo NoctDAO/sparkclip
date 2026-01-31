@@ -230,6 +230,23 @@ export function useVideoSeries() {
     return data as Video;
   }, []);
 
+  const getPreviousVideoInSeries = useCallback(async (seriesId: string, currentOrder: number): Promise<Video | null> => {
+    const { data, error } = await supabase
+      .from("videos")
+      .select("*")
+      .eq("series_id", seriesId)
+      .lt("series_order", currentOrder)
+      .order("series_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data as Video;
+  }, []);
+
   return {
     loading,
     createSeries,
@@ -243,5 +260,6 @@ export function useVideoSeries() {
     deleteSeries,
     getNextPartNumber,
     getNextVideoInSeries,
+    getPreviousVideoInSeries,
   };
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ChevronLeft, SkipForward } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, SkipForward } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoActions } from "./VideoActions";
 import { VideoInfo } from "./VideoInfo";
@@ -36,7 +36,7 @@ export function VideoCard({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { getNextVideoInSeries } = useVideoSeries();
+  const { getNextVideoInSeries, getPreviousVideoInSeries } = useVideoSeries();
   const { autoPlayEnabled } = useSeriesAutoPlay();
   const [showComments, setShowComments] = useState(false);
   const [showSeriesViewer, setShowSeriesViewer] = useState(false);
@@ -45,7 +45,7 @@ export function VideoCard({
   const [showHeartAnimation, setShowHeartAnimation] = useState(false);
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
   const [swipeOffset, setSwipeOffset] = useState(0);
-  const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState<"left" | "right" | null>(null);
   const [showNextPartHint, setShowNextPartHint] = useState(false);
 
   // Keep overlays safely above the fixed bottom nav (and device safe-area)
@@ -56,6 +56,7 @@ export function VideoCard({
   const lastTapRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const isSwipingRef = useRef(false);
+  const isInSeries = !!(video.series_id && video.series_order);
 
   const handleVideoEnd = useCallback(async () => {
     if (!autoPlayEnabled || !video.series_id || !video.series_order) return;
@@ -97,38 +98,84 @@ export function VideoCard({
     // Only track horizontal swipes (ignore vertical scrolling)
     if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
       isSwipingRef.current = true;
+      setSwipeOffset(deltaX);
       
-      // Only allow swiping left (negative deltaX)
-      if (deltaX < 0) {
-        setSwipeOffset(deltaX);
-        setShowSwipeHint(deltaX < -50);
+      // Show appropriate hint based on direction and context
+      if (isInSeries) {
+        // In series: left = next part, right = previous part
+        if (deltaX < -50) {
+          setShowSwipeHint("left");
+        } else if (deltaX > 50) {
+          setShowSwipeHint("right");
+        } else {
+          setShowSwipeHint(null);
+        }
+      } else {
+        // Not in series: only left swipe to profile
+        if (deltaX < -50) {
+          setShowSwipeHint("left");
+        } else {
+          setShowSwipeHint(null);
+        }
       }
     }
-  }, []);
+  }, [isInSeries]);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback(async (e: React.TouchEvent) => {
     if (!touchStartRef.current) return;
 
     const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
     const deltaTime = Date.now() - touchStartRef.current.time;
     
-    // Swipe left threshold: moved more than 100px or fast swipe
+    // Swipe thresholds
     const isSwipeLeft = deltaX < -100 || (deltaX < -50 && deltaTime < 300);
+    const isSwipeRight = deltaX > 100 || (deltaX > 50 && deltaTime < 300);
 
-    if (isSwipeLeft && isSwipingRef.current) {
-      // Navigate to creator's profile
-      navigate(`/profile/${video.user_id}`);
-    } else if (!isSwipingRef.current) {
+    if (isSwipingRef.current) {
+      if (isInSeries && video.series_id && video.series_order) {
+        // Series navigation
+        if (isSwipeLeft) {
+          // Swipe left = next part
+          const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
+          if (nextVideo) {
+            toast({ title: `Part ${nextVideo.series_order}`, duration: 1500 });
+            if (onNavigateToVideo) {
+              onNavigateToVideo(nextVideo.id);
+            } else {
+              navigate(`/video/${nextVideo.id}`);
+            }
+          } else {
+            toast({ title: "This is the last part", duration: 1500 });
+          }
+        } else if (isSwipeRight) {
+          // Swipe right = previous part
+          const prevVideo = await getPreviousVideoInSeries(video.series_id, video.series_order);
+          if (prevVideo) {
+            toast({ title: `Part ${prevVideo.series_order}`, duration: 1500 });
+            if (onNavigateToVideo) {
+              onNavigateToVideo(prevVideo.id);
+            } else {
+              navigate(`/video/${prevVideo.id}`);
+            }
+          } else {
+            toast({ title: "This is the first part", duration: 1500 });
+          }
+        }
+      } else if (isSwipeLeft) {
+        // Not in series: swipe left goes to profile
+        navigate(`/profile/${video.user_id}`);
+      }
+    } else {
       // Handle double tap for like
       handleDoubleTapLogic(e);
     }
 
     // Reset
     setSwipeOffset(0);
-    setShowSwipeHint(false);
+    setShowSwipeHint(null);
     touchStartRef.current = null;
     isSwipingRef.current = false;
-  }, [navigate, video.user_id]);
+  }, [isInSeries, video.series_id, video.series_order, video.user_id, navigate, getNextVideoInSeries, getPreviousVideoInSeries, onNavigateToVideo, toast]);
 
   const handleDoubleTapLogic = useCallback(async (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now();
@@ -208,12 +255,23 @@ export function VideoCard({
         </div>
       )}
 
-      {/* Swipe hint indicator */}
-      {showSwipeHint && (
+      {/* Swipe hint indicators */}
+      {showSwipeHint === "left" && (
         <div className="absolute right-0 top-0 bottom-0 w-20 flex items-center justify-center bg-gradient-to-l from-primary/30 to-transparent pointer-events-none z-30">
           <div className="flex flex-col items-center gap-1 text-foreground">
             <ChevronLeft className="w-8 h-8 animate-pulse" />
-            <span className="text-xs font-semibold">Profile</span>
+            <span className="text-xs font-semibold">
+              {isInSeries ? "Next" : "Profile"}
+            </span>
+          </div>
+        </div>
+      )}
+      
+      {showSwipeHint === "right" && isInSeries && (
+        <div className="absolute left-0 top-0 bottom-0 w-20 flex items-center justify-center bg-gradient-to-r from-primary/30 to-transparent pointer-events-none z-30">
+          <div className="flex flex-col items-center gap-1 text-foreground">
+            <ChevronRight className="w-8 h-8 animate-pulse" />
+            <span className="text-xs font-semibold">Previous</span>
           </div>
         </div>
       )}
