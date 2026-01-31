@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action_type: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
+      appeals: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string
+          id: string
+          reason: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_note: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string
+          id?: string
+          reason: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      banned_users: {
+        Row: {
+          banned_at: string
+          banned_by: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          banned_at?: string
+          banned_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          banned_at?: string
+          banned_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       blocked_users: {
         Row: {
           blocked_user_id: string
@@ -138,6 +237,45 @@ export type Database = {
           },
         ]
       }
+      content_flags: {
+        Row: {
+          confidence: number
+          content_id: string
+          content_type: string
+          created_at: string
+          detected_issues: Json | null
+          flag_type: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          confidence?: number
+          content_id: string
+          content_type: string
+          created_at?: string
+          detected_issues?: Json | null
+          flag_type: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          confidence?: number
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          detected_issues?: Json | null
+          flag_type?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -187,6 +325,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      moderation_keywords: {
+        Row: {
+          action: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_regex: boolean
+          keyword: string
+        }
+        Insert: {
+          action?: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_regex?: boolean
+          keyword: string
+        }
+        Update: {
+          action?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_regex?: boolean
+          keyword?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -591,12 +759,16 @@ export type Database = {
           hashtags: string[] | null
           id: string
           likes_count: number | null
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_note: string | null
           shares_count: number | null
           sound_id: string | null
           thumbnail_url: string | null
           user_id: string
           video_url: string
           views_count: number | null
+          visibility: string
         }
         Insert: {
           caption?: string | null
@@ -605,12 +777,16 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           likes_count?: number | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_note?: string | null
           shares_count?: number | null
           sound_id?: string | null
           thumbnail_url?: string | null
           user_id: string
           video_url: string
           views_count?: number | null
+          visibility?: string
         }
         Update: {
           caption?: string | null
@@ -619,12 +795,16 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           likes_count?: number | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_note?: string | null
           shares_count?: number | null
           sound_id?: string | null
           thumbnail_url?: string | null
           user_id?: string
           video_url?: string
           views_count?: number | null
+          visibility?: string
         }
         Relationships: [
           {
@@ -638,7 +818,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      moderation_queue: {
+        Row: {
+          content_id: string | null
+          content_type: string | null
+          first_reported: string | null
+          last_reported: string | null
+          priority_score: number | null
+          reasons: string[] | null
+          report_count: number | null
+          report_ids: string[] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
