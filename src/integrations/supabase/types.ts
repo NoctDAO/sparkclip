@@ -1088,6 +1088,11 @@ export type Database = {
       can_send_message: { Args: never; Returns: boolean }
       can_submit_report: { Args: never; Returns: boolean }
       can_upload_video: { Args: never; Returns: boolean }
+      can_view_follow: {
+        Args: { follower_user_id: string; following_user_id: string }
+        Returns: boolean
+      }
+      can_view_user_data: { Args: { target_user_id: string }; Returns: boolean }
       check_rate_limit: {
         Args: {
           p_action_type: string
@@ -1138,6 +1143,29 @@ export type Database = {
           video_url: string
           views_count: number
           visibility: string
+        }[]
+      }
+      get_moderation_queue: {
+        Args: never
+        Returns: {
+          content_id: string
+          content_type: string
+          first_reported: string
+          last_reported: string
+          priority_score: number
+          reasons: string[]
+          report_count: number
+          report_ids: string[]
+        }[]
+      }
+      get_video_analytics: {
+        Args: { p_video_id: string }
+        Returns: {
+          avg_completion: number
+          avg_watch_duration: number
+          total_views: number
+          views_this_week: number
+          views_today: number
         }[]
       }
       has_role: {
