@@ -13,6 +13,7 @@ import { Comment } from "@/types/video";
 import { CommentItem } from "@/components/comments/CommentItem";
 import { MentionInput } from "@/components/comments/MentionInput";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useContentModeration } from "@/hooks/useContentModeration";
 
 interface CommentsSheetProps {
   videoId: string;
@@ -26,6 +27,7 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
   const { toast } = useToast();
   const { checkRateLimit: checkCommentLimit } = useRateLimit("comment");
   const { createNotification } = useNotifications();
+  const { moderateContent } = useContentModeration();
   const { canComment, settings: ownerPrivacy } = useUserPrivacy(videoOwnerId);
   const { blockedUsers, isUserBlocked } = useBlockedUsers();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -171,6 +173,26 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
 
     setLoading(true);
 
+    // Generate a temporary ID for moderation (will be replaced with real ID after insert)
+    const tempId = crypto.randomUUID();
+
+    // Run moderation BEFORE inserting
+    const moderationResult = await moderateContent({
+      content: newComment.trim(),
+      content_type: "comment",
+      content_id: tempId,
+    });
+
+    if (moderationResult.blocked) {
+      toast({
+        title: "Comment couldn't be posted",
+        description: "Please revise your comment and try again.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const { data: newCommentData, error } = await supabase
       .from("comments")
       .insert({
@@ -183,6 +205,14 @@ export function CommentsSheet({ videoId, videoOwnerId, open, onOpenChange }: Com
       .single();
 
     if (!error && newCommentData) {
+      // If content was flagged (not blocked), update the content_flags with real comment ID
+      if (!moderationResult.safe && moderationResult.flag_type) {
+        await supabase
+          .from("content_flags")
+          .update({ content_id: newCommentData.id })
+          .eq("content_id", tempId);
+      }
+
       // Create notification for reply
       if (replyingTo && replyingTo.user_id !== user.id) {
         await createNotification({
