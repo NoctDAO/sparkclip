@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, GripVertical, Eye, Trash2, Play } from "lucide-react";
+import { X, GripVertical, Eye, Trash2, Play, AlertTriangle } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -20,6 +20,16 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
 import { VideoSeries, Video } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
@@ -128,11 +138,13 @@ function SortableVideoItem({ video, onRemove, onPlay }: SortableVideoItemProps) 
 export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: SeriesManagerProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getSeriesVideos, reorderSeries, removeFromSeries } = useVideoSeries();
+  const { getSeriesVideos, reorderSeries, removeFromSeries, deleteSeries } = useVideoSeries();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -205,7 +217,47 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
     navigate(`/video/${video.id}`);
   };
 
+  const handleDeleteSeries = async () => {
+    setDeleting(true);
+    const success = await deleteSeries(series.id);
+    setDeleting(false);
+
+    if (success) {
+      toast({ title: "Series deleted successfully" });
+      onOpenChange(false);
+      onSeriesUpdated();
+      navigate(-1);
+    }
+  };
+
   return (
+    <>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Delete Series
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "<strong>{series.title}</strong>"? 
+              This will remove the series but keep all {videos.length} videos. 
+              The videos will no longer be grouped together.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSeries}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete Series"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl">
         <SheetHeader className="pb-4">
@@ -257,8 +309,8 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
               </DndContext>
             </div>
 
-            {hasChanges && (
-              <div className="pt-4 border-t border-border mt-4">
+            <div className="pt-4 border-t border-border mt-4 space-y-2">
+              {hasChanges && (
                 <Button
                   onClick={handleSaveOrder}
                   disabled={saving}
@@ -266,11 +318,20 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
                 >
                   {saving ? "Saving..." : "Save Order"}
                 </Button>
-              </div>
-            )}
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Entire Series
+              </Button>
+            </div>
           </div>
         )}
       </SheetContent>
     </Sheet>
+    </>
   );
 }
