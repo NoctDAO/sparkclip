@@ -1,22 +1,29 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Shield, Users, Flag, FileVideo, BarChart3 } from "lucide-react";
+import { ArrowLeft, Shield, Users, Flag, FileVideo, Ban, ListChecks, AlertTriangle, History, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { ContentModeration } from "@/components/admin/ContentModeration";
+import { ModerationQueue } from "@/components/admin/ModerationQueue";
+import { AppealsManagement } from "@/components/admin/AppealsManagement";
+import { AdminLogs } from "@/components/admin/AdminLogs";
+import { FlaggedContent } from "@/components/admin/FlaggedContent";
 
 interface DashboardStats {
   totalUsers: number;
   totalVideos: number;
   pendingReports: number;
-  totalComments: number;
+  hiddenVideos: number;
+  bannedUsers: number;
+  pendingAppeals: number;
+  pendingFlags: number;
 }
 
 export default function AdminDashboard() {
@@ -28,7 +35,10 @@ export default function AdminDashboard() {
     totalUsers: 0,
     totalVideos: 0,
     pendingReports: 0,
-    totalComments: 0,
+    hiddenVideos: 0,
+    bannedUsers: 0,
+    pendingAppeals: 0,
+    pendingFlags: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -54,18 +64,24 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     setStatsLoading(true);
 
-    const [usersRes, videosRes, reportsRes, commentsRes] = await Promise.all([
+    const [usersRes, videosRes, reportsRes, hiddenRes, bannedRes, appealsRes, flagsRes] = await Promise.all([
       supabase.from("profiles").select("id", { count: "exact", head: true }),
-      supabase.from("videos").select("id", { count: "exact", head: true }),
+      supabase.from("videos").select("id", { count: "exact", head: true }).eq("visibility", "public"),
       supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("comments").select("id", { count: "exact", head: true }),
+      supabase.from("videos").select("id", { count: "exact", head: true }).eq("visibility", "hidden"),
+      supabase.from("banned_users").select("id", { count: "exact", head: true }),
+      supabase.from("appeals").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("content_flags").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]);
 
     setStats({
       totalUsers: usersRes.count || 0,
       totalVideos: videosRes.count || 0,
       pendingReports: reportsRes.count || 0,
-      totalComments: commentsRes.count || 0,
+      hiddenVideos: hiddenRes.count || 0,
+      bannedUsers: bannedRes.count || 0,
+      pendingAppeals: appealsRes.count || 0,
+      pendingFlags: flagsRes.count || 0,
     });
 
     setStatsLoading(false);
@@ -99,7 +115,7 @@ export default function AdminDashboard() {
 
       <div className="p-4">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1">
@@ -115,7 +131,7 @@ export default function AdminDashboard() {
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1">
                 <FileVideo className="w-4 h-4" />
-                Total Videos
+                Public Videos
               </CardDescription>
               <CardTitle className="text-2xl">
                 {statsLoading ? "..." : stats.totalVideos}
@@ -136,56 +152,104 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1">
-                <BarChart3 className="w-4 h-4" />
-                Total Comments
+                <AlertTriangle className="w-4 h-4" />
+                Hidden Videos
               </CardDescription>
               <CardTitle className="text-2xl">
-                {statsLoading ? "..." : stats.totalComments}
+                {statsLoading ? "..." : stats.hiddenVideos}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1">
+                <Ban className="w-4 h-4" />
+                Banned Users
+              </CardDescription>
+              <CardTitle className="text-2xl text-destructive">
+                {statsLoading ? "..." : stats.bannedUsers}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1">
+                <ListChecks className="w-4 h-4" />
+                Pending Appeals
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {statsLoading ? "..." : stats.pendingAppeals}
               </CardTitle>
             </CardHeader>
           </Card>
         </div>
 
         {/* Main Tabs */}
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="w-full grid grid-cols-3">
-            <TabsTrigger value="users" className="gap-1">
-              <Users className="w-4 h-4" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="gap-1">
-              <Flag className="w-4 h-4" />
-              Reports
+        <Tabs defaultValue="queue" className="w-full">
+          <TabsList className="w-full grid grid-cols-3 md:grid-cols-6 h-auto">
+            <TabsTrigger value="queue" className="gap-1 text-xs md:text-sm px-2">
+              <ListChecks className="w-4 h-4" />
+              <span className="hidden sm:inline">Queue</span>
               {stats.pendingReports > 0 && (
                 <Badge variant="destructive" className="ml-1 h-5 px-1.5">
                   {stats.pendingReports}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="content" className="gap-1">
+            <TabsTrigger value="flagged" className="gap-1 text-xs md:text-sm px-2">
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">AI</span>
+              {stats.pendingFlags > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {stats.pendingFlags}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-1 text-xs md:text-sm px-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="appeals" className="gap-1 text-xs md:text-sm px-2">
+              <Flag className="w-4 h-4" />
+              <span className="hidden sm:inline">Appeals</span>
+              {stats.pendingAppeals > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {stats.pendingAppeals}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="content" className="gap-1 text-xs md:text-sm px-2">
               <FileVideo className="w-4 h-4" />
-              Content
+              <span className="hidden sm:inline">Content</span>
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="gap-1 text-xs md:text-sm px-2">
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">Logs</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="queue" className="mt-4">
+            <ModerationQueue />
+          </TabsContent>
+
+          <TabsContent value="flagged" className="mt-4">
+            <FlaggedContent />
+          </TabsContent>
 
           <TabsContent value="users" className="mt-4">
             <UserManagement />
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-4">
-            <div className="text-center py-8">
-              <Flag className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">
-                View and manage reports in the dedicated moderation page
-              </p>
-              <Button onClick={() => navigate("/moderation")}>
-                Go to Reports
-              </Button>
-            </div>
+          <TabsContent value="appeals" className="mt-4">
+            <AppealsManagement />
           </TabsContent>
 
           <TabsContent value="content" className="mt-4">
             <ContentModeration />
+          </TabsContent>
+
+          <TabsContent value="logs" className="mt-4">
+            <AdminLogs />
           </TabsContent>
         </Tabs>
       </div>

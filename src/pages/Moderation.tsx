@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Shield, Check, X, Eye, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Shield, Check, X, Eye, AlertTriangle, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -78,7 +79,7 @@ export default function Moderation() {
   const [contentDetails, setContentDetails] = useState<ContentDetails | null>(null);
   const [actionDialog, setActionDialog] = useState<{
     open: boolean;
-    action: "approve" | "dismiss" | null;
+    action: "hide" | "delete" | "dismiss" | null;
   }>({ open: false, action: null });
   const [actionNote, setActionNote] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -110,7 +111,6 @@ export default function Moderation() {
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      // Fetch reporter profiles
       const reporterIds = [...new Set(data.map((r) => r.reporter_id))];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -180,26 +180,87 @@ export default function Moderation() {
     await fetchContentDetails(report);
   };
 
-  const handleAction = async (action: "approve" | "dismiss") => {
+  const logAdminAction = async (
+    actionType: string,
+    targetType: string,
+    targetId: string,
+    details?: Record<string, unknown>
+  ) => {
+    if (!user) return;
+    
+    await supabase.from("admin_logs").insert([{
+      admin_id: user.id,
+      action_type: actionType,
+      target_type: targetType,
+      target_id: targetId,
+      details: details || null,
+    }] as any);
+  };
+
+  const handleAction = async (action: "hide" | "delete" | "dismiss") => {
     if (!selectedReport || !user) return;
 
     setProcessing(true);
     try {
-      // Update report status
-      const newStatus = action === "approve" ? "actioned" : "dismissed";
-      const { error: updateError } = await supabase
-        .from("reports")
-        .update({
-          status: newStatus,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: user.id,
-        })
-        .eq("id", selectedReport.id);
+      if (action === "dismiss") {
+        // Dismiss report - no action on content
+        const { error: updateError } = await supabase
+          .from("reports")
+          .update({
+            status: "dismissed",
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
+          .eq("id", selectedReport.id);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-      // If actioning, delete the content
-      if (action === "approve" && contentDetails) {
+        await logAdminAction("dismiss_report", "report", selectedReport.id, {
+          content_type: selectedReport.content_type,
+          content_id: selectedReport.content_id,
+          note: actionNote,
+        });
+
+        toast({
+          title: "Report dismissed",
+          description: "The report has been marked as dismissed",
+        });
+      } else if (action === "hide" && selectedReport.content_type === "video") {
+        // Hide video from feed
+        const { error: videoError } = await supabase
+          .from("videos")
+          .update({
+            visibility: "hidden",
+            moderation_note: actionNote || null,
+            moderated_by: user.id,
+            moderated_at: new Date().toISOString(),
+          })
+          .eq("id", selectedReport.content_id);
+
+        if (videoError) throw videoError;
+
+        // Update report status
+        await supabase
+          .from("reports")
+          .update({
+            status: "actioned",
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
+          .eq("id", selectedReport.id);
+
+        await logAdminAction("hide_video", "video", selectedReport.content_id, {
+          report_id: selectedReport.id,
+          reason: selectedReport.reason,
+          note: actionNote,
+        });
+
+        toast({
+          title: "Video hidden",
+          description: "The video has been hidden from public feeds",
+        });
+      } else if (action === "delete") {
+        // Delete content
         if (selectedReport.content_type === "video") {
           await supabase
             .from("videos")
@@ -211,17 +272,29 @@ export default function Moderation() {
             .delete()
             .eq("id", selectedReport.content_id);
         }
+
+        // Update report status
+        await supabase
+          .from("reports")
+          .update({
+            status: "actioned",
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
+          .eq("id", selectedReport.id);
+
+        await logAdminAction(`delete_${selectedReport.content_type}`, selectedReport.content_type, selectedReport.content_id, {
+          report_id: selectedReport.id,
+          reason: selectedReport.reason,
+          note: actionNote,
+        });
+
+        toast({
+          title: "Content removed",
+          description: "The reported content has been deleted",
+        });
       }
 
-      toast({
-        title: action === "approve" ? "Content removed" : "Report dismissed",
-        description:
-          action === "approve"
-            ? "The reported content has been removed"
-            : "The report has been marked as dismissed",
-      });
-
-      // Refresh reports
       await fetchReports();
       setSelectedReport(null);
       setContentDetails(null);
@@ -473,15 +546,27 @@ export default function Moderation() {
                     <X className="w-4 h-4 mr-1" />
                     Dismiss
                   </Button>
+                  {selectedReport.content_type === "video" && (
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        setActionDialog({ open: true, action: "hide" })
+                      }
+                      className="flex-1"
+                    >
+                      <EyeOff className="w-4 h-4 mr-1" />
+                      Hide
+                    </Button>
+                  )}
                   <Button
                     variant="destructive"
                     onClick={() =>
-                      setActionDialog({ open: true, action: "approve" })
+                      setActionDialog({ open: true, action: "delete" })
                     }
                     className="flex-1"
                   >
                     <Check className="w-4 h-4 mr-1" />
-                    Remove Content
+                    Delete
                   </Button>
                 </DialogFooter>
               )}
@@ -500,23 +585,27 @@ export default function Moderation() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionDialog.action === "approve"
-                ? "Remove Content?"
-                : "Dismiss Report?"}
+              {actionDialog.action === "dismiss" && "Dismiss Report?"}
+              {actionDialog.action === "hide" && "Hide Video?"}
+              {actionDialog.action === "delete" && "Delete Content?"}
             </DialogTitle>
             <DialogDescription>
-              {actionDialog.action === "approve"
-                ? "This will permanently delete the reported content. This action cannot be undone."
-                : "This will mark the report as reviewed and take no action on the content."}
+              {actionDialog.action === "dismiss" && "This will mark the report as reviewed and take no action on the content."}
+              {actionDialog.action === "hide" && "This will hide the video from public feeds. It can be restored later."}
+              {actionDialog.action === "delete" && "This will permanently delete the reported content. This action cannot be undone."}
             </DialogDescription>
           </DialogHeader>
 
-          <Textarea
-            placeholder="Add a note (optional)..."
-            value={actionNote}
-            onChange={(e) => setActionNote(e.target.value)}
-            rows={3}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="action-note">Add a note (optional)</Label>
+            <Textarea
+              id="action-note"
+              placeholder="Add a note..."
+              value={actionNote}
+              onChange={(e) => setActionNote(e.target.value)}
+              rows={3}
+            />
+          </div>
 
           <DialogFooter>
             <Button
@@ -526,15 +615,17 @@ export default function Moderation() {
               Cancel
             </Button>
             <Button
-              variant={actionDialog.action === "approve" ? "destructive" : "default"}
+              variant={actionDialog.action === "delete" ? "destructive" : "default"}
               onClick={() => handleAction(actionDialog.action!)}
               disabled={processing}
             >
               {processing
                 ? "Processing..."
-                : actionDialog.action === "approve"
-                ? "Remove Content"
-                : "Dismiss Report"}
+                : actionDialog.action === "dismiss"
+                ? "Dismiss Report"
+                : actionDialog.action === "hide"
+                ? "Hide Video"
+                : "Delete Content"}
             </Button>
           </DialogFooter>
         </DialogContent>
