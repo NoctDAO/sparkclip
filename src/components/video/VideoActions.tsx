@@ -154,20 +154,23 @@ export function VideoActions({
       {/* Like */}
       <button
         onClick={handleLike}
-        className="flex flex-col items-center gap-0.5"
+        className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
       >
         <div className={cn(
-          "p-2 rounded-full backdrop-blur-sm bg-background/20 transition-all",
-          liked && "animate-heart"
+          "p-2 rounded-full backdrop-blur-sm bg-background/20 transition-all duration-150",
+          liked && "animate-heart bg-heart/20"
         )}>
           <Heart
             className={cn(
-              "w-6 h-6 transition-colors drop-shadow-md",
-              liked ? "text-heart fill-heart" : "text-foreground"
+              "w-6 h-6 transition-all duration-150 drop-shadow-md",
+              liked ? "text-heart fill-heart scale-110" : "text-foreground"
             )}
           />
         </div>
-        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
+        <span className={cn(
+          "text-[11px] font-medium drop-shadow-sm transition-colors duration-150",
+          liked ? "text-heart" : "text-foreground/90"
+        )}>
           {formatCount(likesCount)}
         </span>
       </button>
@@ -175,9 +178,9 @@ export function VideoActions({
       {/* Comment */}
       <button
         onClick={onCommentClick}
-        className="flex flex-col items-center gap-0.5"
+        className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
       >
-        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20 hover:bg-background/30 transition-colors duration-150">
           <MessageCircle className="w-6 h-6 text-foreground drop-shadow-md" />
         </div>
         <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
@@ -188,25 +191,31 @@ export function VideoActions({
       {/* Bookmark */}
       <button
         onClick={handleBookmark}
-        className="flex flex-col items-center gap-0.5"
+        className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
       >
-        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+        <div className={cn(
+          "p-2 rounded-full backdrop-blur-sm bg-background/20 transition-all duration-150",
+          bookmarked && "bg-bookmark/20"
+        )}>
           <Bookmark
             className={cn(
-              "w-6 h-6 transition-colors drop-shadow-md",
-              bookmarked ? "text-bookmark fill-bookmark" : "text-foreground"
+              "w-6 h-6 transition-all duration-150 drop-shadow-md",
+              bookmarked ? "text-bookmark fill-bookmark scale-110" : "text-foreground"
             )}
           />
         </div>
-        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Save</span>
+        <span className={cn(
+          "text-[11px] font-medium drop-shadow-sm transition-colors duration-150",
+          bookmarked ? "text-bookmark" : "text-foreground/90"
+        )}>Save</span>
       </button>
 
       {/* Share */}
       <button
         onClick={handleShare}
-        className="flex flex-col items-center gap-0.5"
+        className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
       >
-        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20 hover:bg-background/30 transition-colors duration-150">
           <Share2 className="w-6 h-6 text-foreground drop-shadow-md" />
         </div>
         <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
@@ -223,9 +232,9 @@ export function VideoActions({
       {isOwnVideo && (
         <button
           onClick={() => setShowSeriesSheet(true)}
-          className="flex flex-col items-center gap-0.5"
+          className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
         >
-          <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+          <div className="p-2 rounded-full backdrop-blur-sm bg-background/20 hover:bg-background/30 transition-colors duration-150">
             <Layers className="w-6 h-6 text-foreground drop-shadow-md" />
           </div>
           <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Series</span>
@@ -235,9 +244,9 @@ export function VideoActions({
       {/* Report */}
       <button
         onClick={() => setShowReportDialog(true)}
-        className="flex flex-col items-center gap-0.5"
+        className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
       >
-        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20">
+        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20 hover:bg-background/30 transition-colors duration-150">
           <Flag className="w-6 h-6 text-foreground drop-shadow-md" />
         </div>
         <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Report</span>

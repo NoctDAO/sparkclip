@@ -133,6 +133,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
   }
 
   /* Hide scrollbar for video feed */
@@ -142,6 +148,11 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Improve touch responsiveness */
+  button, a, [role="button"] {
+    touch-action: manipulation;
   }
 }
 
@@ -162,8 +173,39 @@
     padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem);
   }
 
+  /* Interactive feedback */
+  .tap-highlight {
+    @apply active:scale-[0.97] transition-transform duration-100;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .press-effect {
+    @apply transition-transform duration-100 active:scale-95;
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Heart animation */
   .animate-heart {
-    animation: heart-pop 0.3s ease-in-out;
+    animation: heart-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
   @keyframes heart-pop {
@@ -172,17 +214,19 @@
     100% { transform: scale(1); }
   }
 
-  .animate-slide-up {
-    animation: slide-up 0.3s ease-out;
+  /* Page transitions */
+  .page-enter {
+    animation: page-fade-in 0.25s ease-out;
   }
 
-  @keyframes slide-up {
-    0% { transform: translateY(100%); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
+  @keyframes page-fade-in {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
+  /* Double tap heart */
   .animate-double-tap-heart {
-    animation: double-tap-heart 1s ease-out forwards;
+    animation: double-tap-heart 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   }
 
   @keyframes double-tap-heart {
@@ -190,12 +234,16 @@
       transform: translate(-50%, -50%) scale(0);
       opacity: 1;
     }
-    15% { 
+    20% { 
       transform: translate(-50%, -50%) scale(1.2);
       opacity: 1;
     }
-    30% { 
-      transform: translate(-50%, -50%) scale(1);
+    40% { 
+      transform: translate(-50%, -50%) scale(0.95);
+      opacity: 1;
+    }
+    60% {
+      transform: translate(-50%, -50%) scale(1.05);
       opacity: 1;
     }
     80% {
@@ -203,8 +251,25 @@
       opacity: 1;
     }
     100% { 
-      transform: translate(-50%, -50%) scale(1.2);
+      transform: translate(-50%, -50%) scale(0.9);
       opacity: 0;
     }
+  }
+
+  /* Stagger animation delays for lists */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background/80 backdrop-blur-md border-border/50;
+  }
+
+  /* Focus ring animation */
+  .focus-ring {
+    @apply focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow duration-150;
   }
 }
