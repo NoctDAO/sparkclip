@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, GripVertical, Eye, Trash2, Play, AlertTriangle } from "lucide-react";
+import { X, GripVertical, Eye, Trash2, Play, AlertTriangle, Pencil, Check } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -20,6 +20,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -138,13 +140,19 @@ function SortableVideoItem({ video, onRemove, onPlay }: SortableVideoItemProps) 
 export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: SeriesManagerProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getSeriesVideos, reorderSeries, removeFromSeries, deleteSeries } = useVideoSeries();
+  const { getSeriesVideos, reorderSeries, removeFromSeries, deleteSeries, updateSeries } = useVideoSeries();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(series.title);
+  const [editDescription, setEditDescription] = useState(series.description || "");
+  const [savingDetails, setSavingDetails] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -169,6 +177,10 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
     setVideos(seriesVideos);
     setLoading(false);
     setHasChanges(false);
+    // Reset edit state when loading
+    setEditTitle(series.title);
+    setEditDescription(series.description || "");
+    setIsEditing(false);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -230,6 +242,32 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
     }
   };
 
+  const handleSaveDetails = async () => {
+    if (!editTitle.trim()) {
+      toast({ title: "Title is required", variant: "destructive" });
+      return;
+    }
+
+    setSavingDetails(true);
+    const success = await updateSeries(series.id, {
+      title: editTitle.trim(),
+      description: editDescription.trim() || undefined,
+    });
+    setSavingDetails(false);
+
+    if (success) {
+      toast({ title: "Series updated" });
+      setIsEditing(false);
+      onSeriesUpdated();
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditTitle(series.title);
+    setEditDescription(series.description || "");
+    setIsEditing(false);
+  };
+
   return (
     <>
       {/* Delete Confirmation Dialog */}
@@ -259,18 +297,72 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
         </AlertDialogContent>
       </AlertDialog>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl">
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
         <SheetHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div>
-              <SheetTitle className="text-left">{series.title}</SheetTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Drag to reorder parts
-              </p>
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <div className="space-y-2 pr-4">
+                  <Input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Series title"
+                    className="font-semibold"
+                    autoFocus
+                  />
+                  <Textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Add a description (optional)"
+                    className="text-sm resize-none"
+                    rows={2}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleSaveDetails}
+                      disabled={savingDetails}
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      {savingDetails ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelEdit}
+                      disabled={savingDetails}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <SheetTitle className="text-left truncate">{series.title}</SheetTitle>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 flex-shrink-0"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {series.description && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {series.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Drag to reorder parts
+                  </p>
+                </div>
+              )}
             </div>
             <button
               onClick={() => onOpenChange(false)}
-              className="p-2 rounded-full hover:bg-secondary transition-colors"
+              className="p-2 rounded-full hover:bg-secondary transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -286,7 +378,7 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
             <p>No videos in this series</p>
           </div>
         ) : (
-          <div className="flex flex-col h-[calc(80vh-120px)]">
+          <div className="flex flex-col h-[calc(85vh-180px)]">
             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
               <DndContext
                 sensors={sensors}
