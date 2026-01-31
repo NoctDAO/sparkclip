@@ -1,15 +1,17 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Globe, Lock, MessageCircle, Heart, Users } from "lucide-react";
+import { ArrowLeft, Globe, Lock, MessageCircle, Heart, Users, Ban, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePrivacySettings, CommentPermission, MessagePermission } from "@/hooks/usePrivacySettings";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Privacy() {
   const navigate = useNavigate();
   const { settings, loading, saving, updateSetting } = usePrivacySettings();
+  const { blockedUsers } = useBlockedUsers();
   const { toast } = useToast();
 
   const handleUpdate = async <K extends keyof typeof settings>(
@@ -218,6 +220,31 @@ export default function Privacy() {
               </div>
             </>
           )}
+        </div>
+
+        {/* Blocked Accounts */}
+        <div className="mb-6">
+          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Blocked Accounts
+          </h2>
+          
+          <button
+            onClick={() => navigate("/settings/privacy/blocked")}
+            className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <Ban className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Blocked accounts</p>
+                <p className="text-sm text-muted-foreground">
+                  {blockedUsers.length === 0
+                    ? "No blocked accounts"
+                    : `${blockedUsers.length} blocked account${blockedUsers.length === 1 ? "" : "s"}`}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </button>
         </div>
       </div>
     </div>
