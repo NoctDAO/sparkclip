@@ -19,6 +19,7 @@ import Inbox from "./pages/Inbox";
 import EditProfile from "./pages/EditProfile";
 import Settings from "./pages/Settings";
 import ChangePassword from "./pages/ChangePassword";
+import Privacy from "./pages/Privacy";
 import FollowList from "./pages/FollowList";
 import Sounds from "./pages/Sounds";
 import SoundDetail from "./pages/SoundDetail";
@@ -54,6 +55,7 @@ const App = () => {
                   <Route path="/edit-profile" element={<EditProfile />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/settings/password" element={<ChangePassword />} />
+                  <Route path="/settings/privacy" element={<Privacy />} />
                   <Route path="/follow-list/:userId" element={<FollowList />} />
                   <Route path="/sounds" element={<Sounds />} />
                   <Route path="/sounds/:soundId" element={<SoundDetail />} />
