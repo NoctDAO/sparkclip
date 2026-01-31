@@ -160,7 +160,7 @@ export function useVideoSeries() {
 
   const updateSeries = useCallback(async (
     seriesId: string, 
-    updates: { title?: string; description?: string; cover_video_id?: string }
+    updates: { title?: string; description?: string; cover_video_id?: string; cover_image_url?: string | null }
   ): Promise<boolean> => {
     if (!user) return false;
 

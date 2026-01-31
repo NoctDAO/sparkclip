@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, GripVertical, Eye, Trash2, Play, AlertTriangle, Pencil, Check } from "lucide-react";
+import { X, GripVertical, Eye, Trash2, Play, AlertTriangle, Pencil, Check, ImagePlus, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
   closestCenter,
@@ -139,6 +141,7 @@ function SortableVideoItem({ video, onRemove, onPlay }: SortableVideoItemProps) 
 
 export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: SeriesManagerProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
   const { getSeriesVideos, reorderSeries, removeFromSeries, deleteSeries, updateSeries } = useVideoSeries();
   const [videos, setVideos] = useState<Video[]>([]);
@@ -153,6 +156,11 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
   const [editTitle, setEditTitle] = useState(series.title);
   const [editDescription, setEditDescription] = useState(series.description || "");
   const [savingDetails, setSavingDetails] = useState(false);
+  
+  // Cover image state
+  const [coverImageUrl, setCoverImageUrl] = useState(series.cover_image_url || "");
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -180,7 +188,84 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
     // Reset edit state when loading
     setEditTitle(series.title);
     setEditDescription(series.description || "");
+    setCoverImageUrl(series.cover_image_url || "");
     setIsEditing(false);
+  };
+
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploadingCover(true);
+
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/${series.id}-${Date.now()}.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("series-covers")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("series-covers")
+        .getPublicUrl(fileName);
+
+      const newCoverUrl = urlData.publicUrl;
+      setCoverImageUrl(newCoverUrl);
+
+      // Update series in database
+      const success = await updateSeries(series.id, { cover_image_url: newCoverUrl });
+
+      if (success) {
+        toast({ title: "Cover image updated" });
+        onSeriesUpdated();
+      }
+    } catch (error) {
+      console.error("Error uploading cover image:", error);
+      toast({ title: "Failed to upload cover image", variant: "destructive" });
+    } finally {
+      setUploadingCover(false);
+      // Reset input
+      if (coverInputRef.current) {
+        coverInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveCoverImage = async () => {
+    setUploadingCover(true);
+
+    try {
+      const success = await updateSeries(series.id, { cover_image_url: null });
+
+      if (success) {
+        setCoverImageUrl("");
+        toast({ title: "Cover image removed" });
+        onSeriesUpdated();
+      }
+    } catch (error) {
+      console.error("Error removing cover image:", error);
+      toast({ title: "Failed to remove cover image", variant: "destructive" });
+    } finally {
+      setUploadingCover(false);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -302,13 +387,58 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               {isEditing ? (
-                <div className="space-y-2 pr-4">
+                <div className="space-y-3 pr-4">
+                  {/* Cover Image Upload */}
+                  <div className="flex items-start gap-3">
+                    <div 
+                      className="w-20 h-20 rounded-lg bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer relative group"
+                      onClick={() => !uploadingCover && coverInputRef.current?.click()}
+                    >
+                      {uploadingCover ? (
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      ) : coverImageUrl ? (
+                        <>
+                          <img src={coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <ImagePlus className="w-5 h-5 text-white" />
+                          </div>
+                        </>
+                      ) : (
+                        <ImagePlus className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Cover Image</p>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {coverImageUrl ? "Click to change" : "Add a cover image"}
+                      </p>
+                      {coverImageUrl && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveCoverImage}
+                          disabled={uploadingCover}
+                          className="text-destructive hover:text-destructive h-7 px-2"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    <input
+                      ref={coverInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCoverImageUpload}
+                      className="hidden"
+                    />
+                  </div>
+                  
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     placeholder="Series title"
                     className="font-semibold"
-                    autoFocus
                   />
                   <Textarea
                     value={editDescription}

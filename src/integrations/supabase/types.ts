@@ -715,6 +715,7 @@ export type Database = {
       }
       video_series: {
         Row: {
+          cover_image_url: string | null
           cover_video_id: string | null
           created_at: string
           description: string | null
@@ -726,6 +727,7 @@ export type Database = {
           videos_count: number
         }
         Insert: {
+          cover_image_url?: string | null
           cover_video_id?: string | null
           created_at?: string
           description?: string | null
@@ -737,6 +739,7 @@ export type Database = {
           videos_count?: number
         }
         Update: {
+          cover_image_url?: string | null
           cover_video_id?: string | null
           created_at?: string
           description?: string | null
