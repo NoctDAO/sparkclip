@@ -26,6 +26,7 @@ import BlockedUsers from "./pages/BlockedUsers";
 import FollowList from "./pages/FollowList";
 import Sounds from "./pages/Sounds";
 import SoundDetail from "./pages/SoundDetail";
+import FollowedSeries from "./pages/FollowedSeries";
 import VideoPage from "./pages/VideoPage";
 import SeriesDetail from "./pages/SeriesDetail";
 import Analytics from "./pages/Analytics";
@@ -69,6 +70,7 @@ const App = () => {
                       <Route path="/follow-list/:userId" element={<FollowList />} />
                       <Route path="/sounds" element={<Sounds />} />
                       <Route path="/sounds/:soundId" element={<SoundDetail />} />
+                      <Route path="/following-series" element={<FollowedSeries />} />
                       <Route path="/video/:videoId" element={<VideoPage />} />
                       <Route path="/series/:seriesId" element={<SeriesDetail />} />
                       <Route path="/analytics" element={<Analytics />} />
