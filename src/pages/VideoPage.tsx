@@ -161,7 +161,7 @@ export default function VideoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -169,7 +169,7 @@ export default function VideoPage() {
 
   if (!video) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground">
+      <div className="min-h-[var(--app-height)] bg-background flex flex-col items-center justify-center text-foreground">
         <p className="text-lg font-semibold">Video not found</p>
         <Button onClick={() => navigate("/")} variant="link" className="mt-4">
           Go back home

@@ -211,7 +211,7 @@ export default function Analytics() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -224,7 +224,7 @@ export default function Analytics() {
         <meta name="description" content="View your video performance analytics" />
       </Helmet>
 
-      <div className="min-h-screen bg-background pb-safe-nav">
+      <div className="min-h-[var(--app-height)] bg-background pb-safe-nav">
         {/* Header */}
         <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
           <div className="flex items-center justify-between p-4">
