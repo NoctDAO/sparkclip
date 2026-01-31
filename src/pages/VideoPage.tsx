@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Share2, Link2, Check } from "lucide-react";
+import { Helmet } from "react-helmet-async";
+import { ArrowLeft, Heart, Link2, Check } from "lucide-react";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoActions } from "@/components/video/VideoActions";
 import { VideoInfo } from "@/components/video/VideoInfo";
@@ -177,8 +178,47 @@ export default function VideoPage() {
     );
   }
 
+  // SEO metadata
+  const pageTitle = profile?.username 
+    ? `${profile.display_name || profile.username} on Clips${video.caption ? `: "${video.caption.slice(0, 50)}${video.caption.length > 50 ? '...' : ''}"` : ''}`
+    : "Watch this video on Clips";
+  
+  const pageDescription = video.caption 
+    ? `${video.caption.slice(0, 150)}${video.caption.length > 150 ? '...' : ''}`
+    : `Watch this video by @${profile?.username || 'creator'} on Clips`;
+  
+  const pageUrl = `${window.location.origin}/video/${video.id}`;
+  const thumbnailUrl = video.thumbnail_url || video.video_url;
+
   return (
-    <div className="fixed inset-0 bg-black">
+    <>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="video.other" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={thumbnailUrl} />
+        <meta property="og:video" content={video.video_url} />
+        <meta property="og:video:type" content="video/mp4" />
+        <meta property="og:site_name" content="Clips" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="player" />
+        <meta name="twitter:url" content={pageUrl} />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={thumbnailUrl} />
+        <meta name="twitter:player" content={video.video_url} />
+        
+        {/* Additional SEO */}
+        <link rel="canonical" href={pageUrl} />
+      </Helmet>
+
+      <div className="fixed inset-0 bg-black">
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent">
         <button 
@@ -263,6 +303,7 @@ export default function VideoPage() {
         open={showComments}
         onOpenChange={setShowComments}
       />
-    </div>
+      </div>
+    </>
   );
 }
