@@ -191,6 +191,7 @@ export function VideoCard({
           initialLikes={likesCount}
           initialComments={video.comments_count}
           initialShares={video.shares_count}
+          initialViews={video.views_count}
           isLiked={liked}
           isBookmarked={isBookmarked}
           onCommentClick={() => setShowComments(true)}
