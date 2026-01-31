@@ -10,6 +10,7 @@ import { VideoResults } from "@/components/search/VideoResults";
 import { UserResults } from "@/components/search/UserResults";
 import { SoundResults } from "@/components/search/SoundResults";
 import { HashtagResults } from "@/components/search/HashtagResults";
+import { SeriesResults } from "@/components/search/SeriesResults";
 
 export default function Search() {
   const navigate = useNavigate();
@@ -50,7 +51,8 @@ export default function Search() {
     results.videos.length + 
     results.users.length + 
     results.sounds.length + 
-    results.hashtags.length;
+    results.hashtags.length +
+    results.series.length;
 
   const pageTitle = query 
     ? `Search "${query}" | Find Videos, Users & Sounds`
@@ -153,7 +155,7 @@ export default function Search() {
           /* Search Results */
           <div className="flex flex-col h-[calc(100vh-130px)]">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-              <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none px-4 shrink-0">
+              <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none px-4 shrink-0 overflow-x-auto">
                 <TabsTrigger 
                   value="videos" 
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
@@ -165,6 +167,12 @@ export default function Search() {
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   Users {results.users.length > 0 && `(${results.users.length})`}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="series"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                >
+                  Series {results.series.length > 0 && `(${results.series.length})`}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="sounds"
@@ -197,6 +205,9 @@ export default function Search() {
                   </TabsContent>
                   <TabsContent value="users" className="flex-1 overflow-auto mt-0">
                     <UserResults users={results.users} />
+                  </TabsContent>
+                  <TabsContent value="series" className="flex-1 overflow-auto mt-0">
+                    <SeriesResults series={results.series} />
                   </TabsContent>
                   <TabsContent value="sounds" className="flex-1 overflow-auto mt-0">
                     <SoundResults sounds={results.sounds} />
