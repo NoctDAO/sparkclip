@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft, Heart, Link2, Check } from "lucide-react";
+import { ArrowLeft, Heart, Link2, Check, SkipForward } from "lucide-react";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { VideoActions } from "@/components/video/VideoActions";
 import { VideoInfo } from "@/components/video/VideoInfo";
@@ -9,6 +9,7 @@ import { CommentsSheet } from "@/components/video/CommentsSheet";
 import { SeriesViewer } from "@/components/video/SeriesViewer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useVideoSeries } from "@/hooks/useVideoSeries";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, Profile, Sound, VideoSeries } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ export default function VideoPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { getNextVideoInSeries } = useVideoSeries();
 
   const [video, setVideo] = useState<Video | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -34,6 +36,7 @@ export default function VideoPage() {
   const [copied, setCopied] = useState(false);
   const [showHeartAnimation, setShowHeartAnimation] = useState(false);
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
+  const [showNextPartHint, setShowNextPartHint] = useState(false);
 
   const lastTapRef = useRef<number>(0);
 
@@ -175,6 +178,24 @@ export default function VideoPage() {
     setLikesCount(newCount);
   }, []);
 
+  const handleVideoEnd = useCallback(async () => {
+    if (!video?.series_id || !video?.series_order) return;
+
+    const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
+    if (nextVideo) {
+      setShowNextPartHint(true);
+      toast({
+        title: `Up next: Part ${nextVideo.series_order}`,
+        description: nextVideo.caption || "Playing next part...",
+      });
+      
+      setTimeout(() => {
+        setShowNextPartHint(false);
+        navigate(`/video/${nextVideo.id}`);
+      }, 1500);
+    }
+  }, [video?.series_id, video?.series_order, getNextVideoInSeries, navigate, toast]);
+
   if (loading) {
     return (
       <div className="min-h-[var(--app-height)] bg-background flex items-center justify-center">
@@ -308,8 +329,23 @@ export default function VideoPage() {
         className="absolute inset-0 bg-black"
         onClick={handleDoubleTap}
       >
-        <VideoPlayer src={video.video_url} isActive={true} videoId={video.id} />
+        <VideoPlayer 
+          src={video.video_url} 
+          isActive={true} 
+          videoId={video.id}
+          onVideoEnd={video.series_id ? handleVideoEnd : undefined}
+        />
       </div>
+
+      {/* Next part hint overlay */}
+      {showNextPartHint && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-40 pointer-events-none">
+          <div className="flex flex-col items-center gap-2 animate-pulse">
+            <SkipForward className="w-12 h-12 text-primary" />
+            <p className="text-lg font-semibold text-foreground">Playing next part...</p>
+          </div>
+        </div>
+      )}
 
       {/* Double-tap heart animation */}
       {showHeartAnimation && (

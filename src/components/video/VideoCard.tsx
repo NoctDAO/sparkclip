@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ChevronLeft } from "lucide-react";
+import { Heart, ChevronLeft, SkipForward } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoActions } from "./VideoActions";
 import { VideoInfo } from "./VideoInfo";
@@ -8,8 +8,10 @@ import { CommentsSheet } from "./CommentsSheet";
 import { SeriesViewer } from "./SeriesViewer";
 import { Video } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
+import { useVideoSeries } from "@/hooks/useVideoSeries";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface VideoCardProps {
   video: Video;
@@ -18,6 +20,7 @@ interface VideoCardProps {
   isBookmarked?: boolean;
   isFollowing?: boolean;
   bottomNavVisible?: boolean;
+  onNavigateToVideo?: (videoId: string) => void;
 }
 
 export function VideoCard({ 
@@ -27,9 +30,12 @@ export function VideoCard({
   isBookmarked = false,
   isFollowing = false,
   bottomNavVisible = true,
+  onNavigateToVideo,
 }: VideoCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const { getNextVideoInSeries } = useVideoSeries();
   const [showComments, setShowComments] = useState(false);
   const [showSeriesViewer, setShowSeriesViewer] = useState(false);
   const [liked, setLiked] = useState(isLiked);
@@ -38,6 +44,7 @@ export function VideoCard({
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const [showNextPartHint, setShowNextPartHint] = useState(false);
 
   // Keep overlays safely above the fixed bottom nav (and device safe-area)
   // Uses --ui-safe-margin which can be changed via Settings > Display
@@ -47,6 +54,28 @@ export function VideoCard({
   const lastTapRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const isSwipingRef = useRef(false);
+
+  const handleVideoEnd = useCallback(async () => {
+    if (!video.series_id || !video.series_order) return;
+
+    const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
+    if (nextVideo) {
+      setShowNextPartHint(true);
+      toast({
+        title: `Up next: Part ${nextVideo.series_order}`,
+        description: nextVideo.caption || "Playing next part...",
+      });
+      
+      setTimeout(() => {
+        setShowNextPartHint(false);
+        if (onNavigateToVideo) {
+          onNavigateToVideo(nextVideo.id);
+        } else {
+          navigate(`/video/${nextVideo.id}`);
+        }
+      }, 1500);
+    }
+  }, [video.series_id, video.series_order, getNextVideoInSeries, navigate, onNavigateToVideo, toast]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartRef.current = {
@@ -158,8 +187,24 @@ export function VideoCard({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <VideoPlayer src={video.video_url} isActive={isActive} videoId={video.id} bottomNavVisible={bottomNavVisible} />
+        <VideoPlayer 
+          src={video.video_url} 
+          isActive={isActive} 
+          videoId={video.id} 
+          bottomNavVisible={bottomNavVisible}
+          onVideoEnd={video.series_id ? handleVideoEnd : undefined}
+        />
       </div>
+
+      {/* Next part hint overlay */}
+      {showNextPartHint && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-40 pointer-events-none">
+          <div className="flex flex-col items-center gap-2 animate-pulse">
+            <SkipForward className="w-12 h-12 text-primary" />
+            <p className="text-lg font-semibold">Playing next part...</p>
+          </div>
+        </div>
+      )}
 
       {/* Swipe hint indicator */}
       {showSwipeHint && (
