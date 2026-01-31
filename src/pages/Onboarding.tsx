@@ -9,10 +9,12 @@ import { AvatarUploader } from "@/components/settings/AvatarUploader";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOnboardingCheck } from "@/hooks/useOnboardingCheck";
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { refetch: refetchOnboardingStatus } = useOnboardingCheck();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -157,6 +159,8 @@ export default function Onboarding() {
         variant: "destructive",
       });
     } else {
+      // Trigger refetch of onboarding status so guard updates immediately
+      refetchOnboardingStatus();
       toast({
         title: "Welcome!",
         description: "Your profile has been set up successfully",
