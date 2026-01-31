@@ -1,160 +1,171 @@
 
-# Premium UI Refinement
+# Improvement Plan: Security, Features, and Enhancements
 
-## Overview
-Redesign the video feed UI to be more premium, compact, and immersive - taking inspiration from TikTok's refined aesthetic while reducing visual clutter.
+Based on my analysis of your VidShare app, I've identified critical security vulnerabilities, usability improvements, and exciting new features to implement.
 
-## Current Issues (from screenshots)
-1. **Action buttons** are too large with bulky circular backgrounds (p-3 + rounded-full + bg-secondary)
-2. **Bottom navigation** takes up too much vertical space (h-16)
-3. **Video info section** has excessive gaps and spacing
-4. **Top feed tabs** could be more minimal
-5. **Icon sizes** and padding are oversized
+---
 
-## Changes Summary
+## Priority 1: Security Fixes (Critical)
 
-### 1. VideoActions Component - More Compact & Elegant
-**Before:** Large circular backgrounds (p-3), icons 7x7, gap-5 between items
-**After:** Smaller transparent buttons, icons 6x6, gap-4 between items
+### 1.1 Fix Privacy-Exposing RLS Policies
+Currently, the `likes`, `follows`, and `comment_likes` tables are publicly readable, exposing user behavior and social graphs.
 
-Key changes:
-- Remove heavy circular backgrounds on action buttons
-- Use subtle backdrop blur instead of solid backgrounds
-- Reduce icon sizes from `w-7 h-7` to `w-6 h-6`
-- Reduce padding from `p-3` to `p-2`
-- Decrease gap between buttons from `gap-5` to `gap-4`
-- Make text smaller and lighter
+**Changes:**
+- Update `likes` table RLS: Users can only see their own likes; others see aggregate counts only
+- Update `follows` table RLS: Users can see their own follows and who follows them
+- Update `comment_likes` table RLS: Users can only see their own comment likes
 
-### 2. BottomNav - Slimmer Profile
-**Before:** Height h-16 (64px) with text labels
-**After:** Height h-14 (56px) with optional labels, smaller icons
+### 1.2 Enable Leaked Password Protection
+The security scan shows this protection is disabled. Enable it to prevent users from using compromised passwords.
 
-Key changes:
-- Reduce nav height from `h-16` to `h-14`
-- Reduce icon sizes from `w-6 h-6` to `w-5 h-5`
-- Make upload button more compact
-- Add subtle backdrop blur for premium feel
-- Reduce text label size
+### 1.3 Add User Data Deletion Capability (GDPR Compliance)
+- Add DELETE policy to `user_interactions` table so users can clear their watch history
+- Create a proper account deletion flow with backend function to cascade-delete all user data
 
-### 3. FeedTabs - More Subtle Header
-**Before:** Larger text, more padding
-**After:** Slightly smaller text, backdrop blur, minimal padding
+---
 
-Key changes:
-- Add backdrop blur for floating effect
-- Reduce vertical padding
-- Slightly smaller font size
+## Priority 2: Authentication & Security Enhancements
 
-### 4. VideoInfo - Tighter Layout
-**Before:** Multiple gaps (gap-3), larger avatar, more spacing
-**After:** Reduced gaps (gap-2), smaller avatar, compact text
+### 2.1 Email Verification Flow
+Currently, users can sign in immediately after signup. Add:
+- Email verification requirement before accessing features
+- Resend verification email button
+- Verification pending state in UI
 
-Key changes:
-- Reduce gap between elements from `gap-3` to `gap-2`
-- Smaller avatar from `w-10 h-10` to `w-9 h-9`
-- Compact follow button
-- Tighter text spacing
-- Smaller sound info section
+### 2.2 Password Reset Flow
+Add forgot password functionality:
+- "Forgot password?" link on auth page
+- Reset password page at `/reset-password`
+- Email reset link handling
 
-### 5. VideoCard - Adjusted Positioning
-Position elements closer to edges to maximize video visibility:
-- Move actions closer to bottom edge
-- Reduce bottom padding for info section
+### 2.3 Rate Limiting on Sensitive Actions
+Add client-side rate limiting for:
+- Like/unlike actions (prevent spam)
+- Comment posting
+- Follow/unfollow actions
 
-## Visual Comparison
+---
 
-**Before:**
-```text
-┌────────────────────────────────────┐
-│      Following │ For You          │  <- 24px padding
-│                                    │
-│                          ┌───┐     │
-│                          │👁️ │     │  <- Large 52px buttons
-│                          │125K│    │
-│                          └───┘     │
-│                          ┌───┐     │
-│                          │❤️ │     │
-│                          │15K│     │
-│  ┌──┐                    └───┘     │
-│  │👤│ @user [Following]            │  <- 40px avatar
-│  │  │                              │
-│  └──┘                              │
-│  Caption text here...              │  <- gap-3 (12px)
-│  #hashtags                         │
-│  🎵 Sound info                     │
-├────────────────────────────────────┤
-│ 🏠    🔍    ➕    💬    👤         │  <- 64px height
-└────────────────────────────────────┘
-```
+## Priority 3: Feature Enhancements
 
-**After:**
-```text
-┌────────────────────────────────────┐
-│      Following │ For You          │  <- 16px padding + blur
-│                                    │
-│                            👁️      │
-│                           125K     │  <- Smaller 40px buttons
-│                            ❤️      │
-│                           15.4K    │
-│                            💬      │
-│                            892     │
-│  ┌──┐ @user [Following]   🔖      │  <- 36px avatar, inline
-│  └──┘                     Save     │
-│  Caption text... #hashtags  ↗️     │  <- Compact, gap-2
-│  🎵 Sound - Artist         234     │
-├────────────────────────────────────┤
-│   🏠   🔍   ➕   💬   👤          │  <- 56px height + blur
-└────────────────────────────────────┘
-```
+### 3.1 Direct Messaging System
+Create a real-time messaging feature:
+- `messages` table with sender, receiver, content, timestamps
+- `conversations` table for chat threads
+- Inbox tab for DMs with unread indicators
+- Real-time updates using Supabase Realtime
 
-## Files to Modify
+### 3.2 Video Sound Preference Integration
+Wire the existing `useVideoSoundPreference` hook into `VideoPlayer`:
+- Apply saved mute/volume settings when videos play
+- Persist volume changes back to localStorage
 
-| File | Changes |
-|------|---------|
-| `src/components/video/VideoActions.tsx` | Smaller buttons, remove backgrounds, tighter spacing |
-| `src/components/video/VideoInfo.tsx` | Smaller avatar, reduced gaps, compact layout |
-| `src/components/video/VideoCard.tsx` | Adjust positioning (bottom-20 instead of bottom-24) |
-| `src/components/layout/BottomNav.tsx` | Reduce height, smaller icons, add blur |
-| `src/components/layout/FeedTabs.tsx` | Add backdrop blur, reduce padding |
-| `src/index.css` | Add glass morphism utilities if needed |
+### 3.3 Content Reporting System
+Allow users to report inappropriate content:
+- `reports` table for tracking reports
+- Report button on videos and comments
+- Report reason selection modal
+
+### 3.4 Creator Verification Badges
+Add verification system for creators:
+- `user_roles` table for admin/moderator/verified roles
+- Display verification badge on profiles
+- Admin-only endpoint to verify users
+
+---
+
+## Priority 4: Performance & UX Improvements
+
+### 4.1 Infinite Scroll with Virtual List
+Optimize `VideoFeed` for better performance:
+- Implement virtual scrolling to render only visible videos
+- Lazy load videos as user scrolls
+- Preload next video for smoother transitions
+
+### 4.2 Video Thumbnail Generation
+Automatically generate thumbnails for uploaded videos:
+- Edge function to extract frame from video
+- Store thumbnail in storage bucket
+- Update video record with thumbnail URL
+
+### 4.3 Push Notifications
+Enable browser push notifications:
+- Service worker for notification handling
+- Notification permission request
+- Real-time notification delivery
+
+---
 
 ## Technical Details
 
-### VideoActions Changes
-```tsx
-// Before
-<div className="p-3 rounded-full bg-secondary/80">
-  <Eye className="w-7 h-7 text-foreground" />
-</div>
+### Database Changes Required
 
-// After
-<div className="p-2 rounded-full backdrop-blur-sm">
-  <Eye className="w-6 h-6 text-foreground drop-shadow-md" />
-</div>
+```text
++-------------------+     +-------------------+
+|   user_roles      |     |    messages       |
++-------------------+     +-------------------+
+| id (uuid)         |     | id (uuid)         |
+| user_id (uuid)    |     | sender_id (uuid)  |
+| role (app_role)   |     | receiver_id (uuid)|
++-------------------+     | content (text)    |
+                          | read_at (timestamp)|
++-------------------+     | created_at        |
+|    reports        |     +-------------------+
++-------------------+
+| id (uuid)         |
+| reporter_id       |
+| content_type      |
+| content_id        |
+| reason (text)     |
+| status (text)     |
+| created_at        |
++-------------------+
 ```
 
-### BottomNav Changes
-```tsx
-// Before
-<nav className="fixed bottom-0 ... bg-background border-t border-border">
-  <div className="flex items-center justify-around h-16">
+### RLS Policy Updates
 
-// After
-<nav className="fixed bottom-0 ... bg-background/80 backdrop-blur-md border-t border-border/50">
-  <div className="flex items-center justify-around h-14">
+**likes table (stricter policy):**
+```sql
+-- Users can only see their own likes
+CREATE POLICY "Users can view own likes"
+ON likes FOR SELECT
+USING (auth.uid() = user_id);
 ```
 
-### FeedTabs Changes
-```tsx
-// Before
-<div className="fixed top-0 ... pt-4 pb-2">
-
-// After
-<div className="fixed top-0 ... pt-3 pb-1.5 bg-gradient-to-b from-background/80 to-transparent backdrop-blur-sm">
+**follows table (privacy-aware):**
+```sql
+-- Users can see their own follows and who follows them
+CREATE POLICY "Users can view own follow relationships"
+ON follows FOR SELECT
+USING (auth.uid() = follower_id OR auth.uid() = following_id);
 ```
 
-## Summary
-- **~15% vertical space saved** on navigation elements
-- **Cleaner, more premium aesthetic** with glass morphism effects
-- **Better video visibility** with reduced overlay clutter
-- **Consistent with modern app design** trends (blur, transparency, compact)
+### New Edge Functions
+
+1. **delete-user-data**: Cascade delete all user content for GDPR compliance
+2. **verify-user**: Admin-only function to add verification badges
+3. **generate-thumbnail**: Extract thumbnail from uploaded video
+
+---
+
+## Implementation Order
+
+| Phase | Items | Estimated Effort |
+|-------|-------|------------------|
+| 1 | Security fixes (RLS, password protection) | Quick wins |
+| 2 | Auth enhancements (password reset, email verification) | Medium |
+| 3 | Video sound preference wiring | Quick |
+| 4 | Direct messaging system | Large feature |
+| 5 | Reporting system | Medium |
+| 6 | Performance optimizations | Ongoing |
+
+---
+
+## Recommended First Steps
+
+1. **Fix the critical security issues** - The exposed user behavior data is a privacy violation
+2. **Add password reset** - Essential for user recovery
+3. **Wire sound preferences** - Quick win using existing code
+4. **Implement DM system** - High-value feature for engagement
+
+Would you like me to start with the security fixes and then proceed to the features?
