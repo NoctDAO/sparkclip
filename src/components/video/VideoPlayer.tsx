@@ -166,12 +166,16 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
       <button
         onClick={toggleMute}
         className={cn(
-          "absolute top-14 right-3 p-2 rounded-full transition-all z-10",
+          "absolute p-2 rounded-full transition-all z-10",
           isMuted 
             ? "bg-primary/90 opacity-100 animate-pulse" 
             : "bg-background/50 backdrop-blur-sm",
           !isMuted && !showControls && isPlaying && "opacity-0"
         )}
+        style={{
+          top: "calc(var(--safe-top) + 3.5rem)",
+          right: "calc(var(--safe-right) + 0.75rem)",
+        }}
       >
         {isMuted ? (
           <VolumeX className="w-5 h-5 text-primary-foreground" />
@@ -182,7 +186,8 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
 
       {/* Progress bar - always visible */}
       <div 
-        className="absolute bottom-0 left-0 right-0 h-1 bg-foreground/20 cursor-pointer z-20"
+        className="absolute left-0 right-0 h-1 bg-foreground/20 cursor-pointer z-20"
+        style={{ bottom: "calc(var(--bottom-nav-height) + var(--safe-bottom))" }}
         onClick={handleProgressClick}
       >
         <div 

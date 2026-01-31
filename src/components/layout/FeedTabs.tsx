@@ -10,9 +10,10 @@ export function FeedTabs({ activeTab, onTabChange, isVisible = true }: FeedTabsP
   return (
     <div 
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 flex items-center justify-center pt-3 pb-1.5 bg-gradient-to-b from-background/80 to-transparent backdrop-blur-sm transition-transform duration-300",
+        "fixed top-0 left-0 right-0 z-50 flex items-center justify-center pb-1.5 bg-gradient-to-b from-background/80 to-transparent backdrop-blur-sm transition-transform duration-300",
         !isVisible && "-translate-y-full"
       )}
+      style={{ paddingTop: "calc(var(--safe-top) + 0.75rem)" }}
     >
       <div className="flex items-center gap-3">
         <button
