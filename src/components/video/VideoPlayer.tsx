@@ -162,14 +162,14 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
         </div>
       )}
       
-      {/* Mute toggle - always visible when muted to prompt user to tap for sound */}
+      {/* Mute toggle - positioned safely inside viewport */}
       <button
         onClick={toggleMute}
         className={cn(
-          "absolute bottom-8 right-4 p-2 rounded-full transition-all z-10",
+          "absolute top-14 right-3 p-2 rounded-full transition-all z-10",
           isMuted 
             ? "bg-primary/90 opacity-100 animate-pulse" 
-            : "bg-secondary/80",
+            : "bg-background/50 backdrop-blur-sm",
           !isMuted && !showControls && isPlaying && "opacity-0"
         )}
       >
