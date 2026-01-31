@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { VideoSoundProvider } from "@/contexts/VideoSoundContext";
 import { useAppViewportHeight } from "@/hooks/useAppViewportHeight";
 import { OnboardingGuard } from "@/components/OnboardingGuard";
+import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -42,40 +43,42 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <VideoSoundProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <OnboardingGuard>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/onboarding" element={<Onboarding />} />
-                    <Route path="/profile/:userId" element={<Profile />} />
-                    <Route path="/upload" element={<Upload />} />
-                    <Route path="/discover" element={<Discover />} />
-                    <Route path="/search" element={<Search />} />
-                    <Route path="/hashtag/:tag" element={<HashtagPage />} />
-                    <Route path="/inbox" element={<Inbox />} />
-                    <Route path="/edit-profile" element={<EditProfile />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/settings/password" element={<ChangePassword />} />
-                    <Route path="/settings/privacy" element={<Privacy />} />
-                    <Route path="/settings/privacy/blocked" element={<BlockedUsers />} />
-                    <Route path="/follow-list/:userId" element={<FollowList />} />
-                    <Route path="/sounds" element={<Sounds />} />
-                    <Route path="/sounds/:soundId" element={<SoundDetail />} />
-                    <Route path="/video/:videoId" element={<VideoPage />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/moderation" element={<Moderation />} />
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </OnboardingGuard>
-              </BrowserRouter>
-            </TooltipProvider>
+            <NotificationProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <OnboardingGuard>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/onboarding" element={<Onboarding />} />
+                      <Route path="/profile/:userId" element={<Profile />} />
+                      <Route path="/upload" element={<Upload />} />
+                      <Route path="/discover" element={<Discover />} />
+                      <Route path="/search" element={<Search />} />
+                      <Route path="/hashtag/:tag" element={<HashtagPage />} />
+                      <Route path="/inbox" element={<Inbox />} />
+                      <Route path="/edit-profile" element={<EditProfile />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/settings/password" element={<ChangePassword />} />
+                      <Route path="/settings/privacy" element={<Privacy />} />
+                      <Route path="/settings/privacy/blocked" element={<BlockedUsers />} />
+                      <Route path="/follow-list/:userId" element={<FollowList />} />
+                      <Route path="/sounds" element={<Sounds />} />
+                      <Route path="/sounds/:soundId" element={<SoundDetail />} />
+                      <Route path="/video/:videoId" element={<VideoPage />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/moderation" element={<Moderation />} />
+                      <Route path="/admin" element={<AdminDashboard />} />
+                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </OnboardingGuard>
+                </BrowserRouter>
+              </TooltipProvider>
+            </NotificationProvider>
           </VideoSoundProvider>
         </AuthProvider>
       </QueryClientProvider>
