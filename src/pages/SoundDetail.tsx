@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { ArrowLeft, Play, Pause, Heart, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -138,7 +139,82 @@ export default function SoundDetail() {
 
   if (!sound) return null;
 
+  // SEO metadata
+  const artistName = sound.artist || "Unknown artist";
+  const pageTitle = `${sound.title} by ${artistName} | Sound`;
+  const pageDescription = `Listen to "${sound.title}" by ${artistName}. Used in ${sound.uses_count} videos. Discover trending sounds and create your own videos.`;
+  const pageUrl = `${window.location.origin}/sounds/${sound.id}`;
+  const coverUrl = sound.cover_url || `${window.location.origin}/placeholder.svg`;
+
+  // Format duration for ISO 8601 (PT#M#S format)
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return undefined;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `PT${mins}M${secs}S`;
+  };
+
+  // JSON-LD structured data for MusicRecording
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "MusicRecording",
+    "name": sound.title,
+    "url": pageUrl,
+    "image": coverUrl,
+    "datePublished": sound.created_at,
+    ...(sound.duration_seconds && {
+      "duration": formatDuration(sound.duration_seconds)
+    }),
+    ...(sound.artist && {
+      "byArtist": {
+        "@type": "MusicGroup",
+        "name": sound.artist
+      }
+    }),
+    "interactionStatistic": {
+      "@type": "InteractionCounter",
+      "interactionType": "https://schema.org/UseAction",
+      "userInteractionCount": sound.uses_count
+    },
+    ...(sound.audio_url && {
+      "audio": {
+        "@type": "AudioObject",
+        "contentUrl": sound.audio_url,
+        "encodingFormat": "audio/mpeg"
+      }
+    })
+  };
+
   return (
+    <>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        
+        {/* Open Graph */}
+        <meta property="og:type" content="music.song" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:image" content={coverUrl} />
+        <meta property="og:audio" content={sound.audio_url} />
+        <meta property="music:musician" content={artistName} />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={coverUrl} />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href={pageUrl} />
+        
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
+      </Helmet>
+
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border p-4">
@@ -251,5 +327,6 @@ export default function SoundDetail() {
 
       <BottomNav />
     </div>
+    </>
   );
 }
