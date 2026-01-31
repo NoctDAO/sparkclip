@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Volume2, VolumeX, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { useVideoAnalytics } from "@/hooks/useVideoAnalytics";
 
 interface VideoPlayerProps {
   src: string;
@@ -17,55 +17,9 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
   const [progress, setProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
-  const viewCountedRef = useRef(false);
-  const watchTimeRef = useRef(0);
-  const lastTimeRef = useRef(0);
 
-  // Track view after 3 seconds of watching
-  useEffect(() => {
-    if (!isActive || !videoId) {
-      watchTimeRef.current = 0;
-      lastTimeRef.current = 0;
-      return;
-    }
-
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleTimeUpdate = () => {
-      if (viewCountedRef.current) return;
-      
-      const currentTime = video.currentTime;
-      // Only count forward progress, not seeks or loops
-      if (currentTime > lastTimeRef.current && currentTime - lastTimeRef.current < 1) {
-        watchTimeRef.current += currentTime - lastTimeRef.current;
-      }
-      lastTimeRef.current = currentTime;
-
-      if (watchTimeRef.current >= 3 && !viewCountedRef.current) {
-        viewCountedRef.current = true;
-        incrementViewCount();
-      }
-    };
-
-    const incrementViewCount = async () => {
-      try {
-        await supabase.rpc('increment_view_count', { video_id: videoId });
-      } catch {
-        // Silent fail - view count is not critical
-      }
-    };
-
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    return () => video.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [isActive, videoId]);
-
-  // Reset view counted when video changes
-  useEffect(() => {
-    viewCountedRef.current = false;
-    watchTimeRef.current = 0;
-    lastTimeRef.current = 0;
-  }, [videoId]);
+  // Use analytics hook to track view events
+  useVideoAnalytics({ videoId, isActive, videoRef });
 
   useEffect(() => {
     const video = videoRef.current;

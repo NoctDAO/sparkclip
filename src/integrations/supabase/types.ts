@@ -336,6 +336,47 @@ export type Database = {
           },
         ]
       }
+      video_views: {
+        Row: {
+          completion_percentage: number | null
+          created_at: string
+          id: string
+          video_duration_seconds: number | null
+          video_id: string
+          viewer_id: string | null
+          watch_duration_seconds: number
+          watched_at: string
+        }
+        Insert: {
+          completion_percentage?: number | null
+          created_at?: string
+          id?: string
+          video_duration_seconds?: number | null
+          video_id: string
+          viewer_id?: string | null
+          watch_duration_seconds?: number
+          watched_at?: string
+        }
+        Update: {
+          completion_percentage?: number | null
+          created_at?: string
+          id?: string
+          video_duration_seconds?: number | null
+          video_id?: string
+          viewer_id?: string | null
+          watch_duration_seconds?: number
+          watched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_views_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           caption: string | null
