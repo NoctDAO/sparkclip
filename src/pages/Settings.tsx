@@ -228,7 +228,7 @@ export default function Settings() {
             icon={Shield}
             label="Privacy"
             description="Manage your privacy settings"
-            onClick={() => toast({ title: "Coming soon" })}
+            onClick={() => navigate("/settings/privacy")}
           />
           <SettingsItem
             icon={BarChart3}

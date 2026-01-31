@@ -458,6 +458,45 @@ export type Database = {
           },
         ]
       }
+      user_privacy_settings: {
+        Row: {
+          comment_permission: string
+          created_at: string
+          id: string
+          is_private_account: boolean
+          message_permission: string
+          show_followers_list: boolean
+          show_following_list: boolean
+          show_liked_videos: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment_permission?: string
+          created_at?: string
+          id?: string
+          is_private_account?: boolean
+          message_permission?: string
+          show_followers_list?: boolean
+          show_following_list?: boolean
+          show_liked_videos?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment_permission?: string
+          created_at?: string
+          id?: string
+          is_private_account?: boolean
+          message_permission?: string
+          show_followers_list?: boolean
+          show_following_list?: boolean
+          show_liked_videos?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string
