@@ -11,6 +11,7 @@ import {
   LogOut,
   Trash2,
   BarChart3,
+  ShieldAlert,
 } from "lucide-react";
 import { SettingsItem } from "@/components/settings/SettingsItem";
 import { UiMarginSetting } from "@/components/settings/UiMarginSetting";
@@ -19,6 +20,7 @@ import { SoundPreferenceToggle } from "@/components/settings/SoundPreferenceTogg
 import { FeedPreferenceToggle } from "@/components/settings/FeedPreferenceToggle";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -34,6 +36,7 @@ import {
 export default function Settings() {
   const navigate = useNavigate();
   const { user, session, signOut } = useAuth();
+  const { isAdmin, isModerator } = useUserRoles(user?.id);
   const { toast } = useToast();
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -136,6 +139,14 @@ export default function Settings() {
             description="View your video performance"
             onClick={() => navigate("/analytics")}
           />
+          {(isAdmin || isModerator) && (
+            <SettingsItem
+              icon={ShieldAlert}
+              label="Moderation"
+              description="Review reported content"
+              onClick={() => navigate("/moderation")}
+            />
+          )}
         </div>
 
         {/* Display Section */}
