@@ -33,11 +33,12 @@ import {
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
   const { toast } = useToast();
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,12 +47,53 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = async () => {
-    // For now, just sign out - actual account deletion would need server-side implementation
-    toast({
-      title: "Account deletion requested",
-      description: "Please contact support to complete account deletion",
-    });
-    setShowDeleteDialog(false);
+    if (!session?.access_token) {
+      toast({
+        title: "Error",
+        description: "You must be signed in to delete your account",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user-data`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete account");
+      }
+
+      toast({
+        title: "Account deleted",
+        description: "Your account and all data have been permanently deleted",
+      });
+      
+      // Clear local state and redirect
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Delete account error:", error);
+      toast({
+        title: "Deletion failed",
+        description: error instanceof Error ? error.message : "Please try again later",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
 
   return (
@@ -211,9 +253,10 @@ export default function Settings() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAccount}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete account
+              {isDeleting ? "Deleting..." : "Delete account"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
