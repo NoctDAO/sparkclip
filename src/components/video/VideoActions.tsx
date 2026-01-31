@@ -104,13 +104,14 @@ export function VideoActions({
   };
 
   const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/video/${videoId}`;
     try {
       await navigator.share({
         title: "Check out this video!",
-        url: window.location.href,
+        url: shareUrl,
       });
     } catch {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(shareUrl);
       toast({ title: "Link copied to clipboard" });
     }
   };
