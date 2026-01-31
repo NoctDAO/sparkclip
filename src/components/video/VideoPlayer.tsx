@@ -8,9 +8,10 @@ interface VideoPlayerProps {
   isActive: boolean;
   videoId?: string;
   className?: string;
+  bottomNavVisible?: boolean;
 }
 
-export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerProps) {
+export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -186,8 +187,8 @@ export function VideoPlayer({ src, isActive, videoId, className }: VideoPlayerPr
 
       {/* Progress bar - always visible */}
       <div 
-        className="absolute left-0 right-0 h-1 bg-foreground/20 cursor-pointer z-20"
-        style={{ bottom: "calc(var(--bottom-nav-height) + var(--safe-bottom))" }}
+        className="absolute left-0 right-0 h-1 bg-foreground/20 cursor-pointer z-20 transition-[bottom] duration-300 ease-out"
+        style={{ bottom: bottomNavVisible ? "calc(var(--bottom-nav-height) + var(--safe-bottom))" : "var(--safe-bottom)" }}
         onClick={handleProgressClick}
       >
         <div 
