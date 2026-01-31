@@ -10,6 +10,7 @@ import { SeriesViewer } from "@/components/video/SeriesViewer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
+import { useSeriesAutoPlay } from "@/hooks/useSeriesAutoPlay";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, Profile, Sound, VideoSeries } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,7 @@ export default function VideoPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { getNextVideoInSeries } = useVideoSeries();
+  const { autoPlayEnabled } = useSeriesAutoPlay();
 
   const [video, setVideo] = useState<Video | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -179,7 +181,7 @@ export default function VideoPage() {
   }, []);
 
   const handleVideoEnd = useCallback(async () => {
-    if (!video?.series_id || !video?.series_order) return;
+    if (!autoPlayEnabled || !video?.series_id || !video?.series_order) return;
 
     const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
     if (nextVideo) {
@@ -194,7 +196,7 @@ export default function VideoPage() {
         navigate(`/video/${nextVideo.id}`);
       }, 1500);
     }
-  }, [video?.series_id, video?.series_order, getNextVideoInSeries, navigate, toast]);
+  }, [autoPlayEnabled, video?.series_id, video?.series_order, getNextVideoInSeries, navigate, toast]);
 
   if (loading) {
     return (

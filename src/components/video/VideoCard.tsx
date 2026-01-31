@@ -9,6 +9,7 @@ import { SeriesViewer } from "./SeriesViewer";
 import { Video } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
+import { useSeriesAutoPlay } from "@/hooks/useSeriesAutoPlay";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +37,7 @@ export function VideoCard({
   const { user } = useAuth();
   const { toast } = useToast();
   const { getNextVideoInSeries } = useVideoSeries();
+  const { autoPlayEnabled } = useSeriesAutoPlay();
   const [showComments, setShowComments] = useState(false);
   const [showSeriesViewer, setShowSeriesViewer] = useState(false);
   const [liked, setLiked] = useState(isLiked);
@@ -56,7 +58,7 @@ export function VideoCard({
   const isSwipingRef = useRef(false);
 
   const handleVideoEnd = useCallback(async () => {
-    if (!video.series_id || !video.series_order) return;
+    if (!autoPlayEnabled || !video.series_id || !video.series_order) return;
 
     const nextVideo = await getNextVideoInSeries(video.series_id, video.series_order);
     if (nextVideo) {
@@ -75,7 +77,7 @@ export function VideoCard({
         }
       }, 1500);
     }
-  }, [video.series_id, video.series_order, getNextVideoInSeries, navigate, onNavigateToVideo, toast]);
+  }, [autoPlayEnabled, video.series_id, video.series_order, getNextVideoInSeries, navigate, onNavigateToVideo, toast]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartRef.current = {
