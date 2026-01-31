@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Play, Loader2 } from "lucide-react";
+import { Play, Loader2, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVideoAnalytics } from "@/hooks/useVideoAnalytics";
 
@@ -19,6 +19,10 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
   const [showControls, setShowControls] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
   const [isLandscape, setIsLandscape] = useState(false);
+  const [showVolumeIndicator, setShowVolumeIndicator] = useState(false);
+  const [currentVolume, setCurrentVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const volumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use analytics hook to track view events
   useVideoAnalytics({ videoId, isActive, videoRef });
@@ -65,6 +69,26 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
       }
     };
 
+    const handleVolumeChange = () => {
+      if (!video) return;
+      
+      setCurrentVolume(video.volume);
+      setIsMuted(video.muted);
+      
+      // Show the volume indicator
+      setShowVolumeIndicator(true);
+      
+      // Clear any existing timeout
+      if (volumeTimeoutRef.current) {
+        clearTimeout(volumeTimeoutRef.current);
+      }
+      
+      // Hide after 1.5 seconds
+      volumeTimeoutRef.current = setTimeout(() => {
+        setShowVolumeIndicator(false);
+      }, 1500);
+    };
+
     video.addEventListener("waiting", handleWaiting);
     video.addEventListener("playing", handlePlaying);
     video.addEventListener("canplay", handleCanPlay);
@@ -72,6 +96,7 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
     video.addEventListener("seeked", handleSeeked);
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
     video.addEventListener("ended", handleEnded);
+    video.addEventListener("volumechange", handleVolumeChange);
 
     // Check if metadata is already loaded
     if (video.videoWidth > 0) {
@@ -86,6 +111,11 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
       video.removeEventListener("seeked", handleSeeked);
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       video.removeEventListener("ended", handleEnded);
+      video.removeEventListener("volumechange", handleVolumeChange);
+      
+      if (volumeTimeoutRef.current) {
+        clearTimeout(volumeTimeoutRef.current);
+      }
     };
   }, [onVideoEnd]);
 
@@ -160,6 +190,28 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
           <Play className="w-20 h-20 text-foreground/80 fill-foreground/80" />
         </div>
       )}
+
+      {/* Volume indicator */}
+      <div
+        className={cn(
+          "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30",
+          "flex flex-col items-center gap-3 p-4 rounded-2xl bg-background/80 backdrop-blur-md",
+          "transition-opacity duration-300",
+          showVolumeIndicator ? "opacity-100" : "opacity-0"
+        )}
+      >
+        {isMuted || currentVolume === 0 ? (
+          <VolumeX className="w-10 h-10 text-foreground" />
+        ) : (
+          <Volume2 className="w-10 h-10 text-foreground" />
+        )}
+        <div className="w-24 h-1.5 bg-foreground/20 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary rounded-full transition-all duration-150"
+            style={{ width: `${isMuted ? 0 : currentVolume * 100}%` }}
+          />
+        </div>
+      </div>
       
 
       {/* Progress bar - always visible */}
