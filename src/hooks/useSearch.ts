@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, Profile, Sound } from "@/types/video";
+import { Video, Profile, Sound, VideoSeries } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
 import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 
@@ -9,11 +9,20 @@ export interface HashtagResult {
   videoCount: number;
 }
 
+export interface SeriesWithCreator extends VideoSeries {
+  profiles?: {
+    username: string | null;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
 export interface SearchResults {
   videos: Video[];
   users: Profile[];
   sounds: Sound[];
   hashtags: HashtagResult[];
+  series: SeriesWithCreator[];
 }
 
 export function useSearch(query: string, debounceMs = 300) {
@@ -24,6 +33,7 @@ export function useSearch(query: string, debounceMs = 300) {
     users: [],
     sounds: [],
     hashtags: [],
+    series: [],
   });
   const [isLoading, setIsLoading] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -34,7 +44,7 @@ export function useSearch(query: string, debounceMs = 300) {
   // Debounced search
   useEffect(() => {
     if (!query.trim()) {
-      setResults({ videos: [], users: [], sounds: [], hashtags: [] });
+      setResults({ videos: [], users: [], sounds: [], hashtags: [], series: [] });
       return;
     }
 
@@ -90,7 +100,7 @@ export function useSearch(query: string, debounceMs = 300) {
     setIsLoading(true);
 
     try {
-      const [videosRes, usersRes, soundsRes] = await Promise.all([
+      const [videosRes, usersRes, soundsRes, seriesRes] = await Promise.all([
         // Search videos by caption and hashtags
         supabase
           .from("videos")
@@ -114,7 +124,36 @@ export function useSearch(query: string, debounceMs = 300) {
           .or(`title.ilike.%${searchQuery}%,artist.ilike.%${searchQuery}%`)
           .order("uses_count", { ascending: false })
           .limit(20),
+
+        // Search series by title and description
+        supabase
+          .from("video_series")
+          .select("*")
+          .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+          .order("total_views", { ascending: false })
+          .limit(20),
       ]);
+
+      // Fetch creator profiles for series
+      const seriesData = seriesRes.data || [];
+      let seriesWithCreators: SeriesWithCreator[] = [];
+      
+      if (seriesData.length > 0) {
+        const userIds = [...new Set(seriesData.map(s => s.user_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, username, display_name, avatar_url")
+          .in("user_id", userIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+        seriesWithCreators = seriesData
+          .filter(s => !blockedUserIds.has(s.user_id))
+          .map(s => ({
+            ...s,
+            profiles: profileMap.get(s.user_id) || null,
+          }));
+      }
 
       // Also search for hashtag matches
       const { data: hashtagVideos } = await supabase
@@ -148,6 +187,7 @@ export function useSearch(query: string, debounceMs = 300) {
         users: filteredUsers,
         sounds: (soundsRes.data || []) as Sound[],
         hashtags,
+        series: seriesWithCreators,
       });
     } catch (error) {
       console.error("Search error:", error);
