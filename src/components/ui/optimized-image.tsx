@@ -1,7 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "./skeleton";
+import { 
+  getResponsiveSrcSet, 
+  getTransformedImageUrl,
+  isSupabaseStorageUrl 
+} from "@/lib/image-utils";
 
 type AspectRatio = "square" | "video" | "cover" | number;
 
@@ -13,6 +18,12 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
   showSkeleton?: boolean;
   priority?: boolean;
   containerClassName?: string;
+  /** Base width for responsive srcset generation */
+  baseWidth?: number;
+  /** Image quality (1-100) */
+  quality?: number;
+  /** Disable responsive optimization */
+  disableOptimization?: boolean;
 }
 
 const aspectRatioClasses: Record<string, string> = {
@@ -30,6 +41,9 @@ export function OptimizedImage({
   priority = false,
   className,
   containerClassName,
+  baseWidth = 300,
+  quality = 80,
+  disableOptimization = false,
   ...props
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +65,26 @@ export function OptimizedImage({
   const aspectStyle = typeof aspectRatio === "number" 
     ? { aspectRatio: aspectRatio } 
     : undefined;
+
+  // Generate responsive image attributes
+  const imageAttrs = useMemo(() => {
+    if (disableOptimization || !isSupabaseStorageUrl(src)) {
+      return { src };
+    }
+
+    const optimizedSrc = getTransformedImageUrl(src, {
+      width: baseWidth * 2, // Default to 2x for retina
+      quality,
+      resize: "cover",
+    });
+
+    const srcSet = getResponsiveSrcSet(src, baseWidth, quality);
+
+    return {
+      src: optimizedSrc,
+      srcSet: srcSet || undefined,
+    };
+  }, [src, baseWidth, quality, disableOptimization]);
 
   return (
     <div 
@@ -78,9 +112,10 @@ export function OptimizedImage({
       {/* Image */}
       {!hasError && (
         <img
-          src={src}
+          {...imageAttrs}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
+          decoding={priority ? "sync" : "async"}
           onLoad={handleLoad}
           onError={handleError}
           className={cn(

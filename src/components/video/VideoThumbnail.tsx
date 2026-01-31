@@ -1,7 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Play, ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  getResponsiveSrcSet, 
+  getOptimizedThumbnailUrl,
+  isSupabaseStorageUrl 
+} from "@/lib/image-utils";
 
 interface VideoThumbnailProps {
   thumbnailUrl?: string | null;
@@ -11,7 +16,15 @@ interface VideoThumbnailProps {
   onClick?: () => void;
   className?: string;
   priority?: boolean;
+  /** Size variant for optimization */
+  size?: "small" | "medium" | "large";
 }
+
+const sizeToBaseWidth = {
+  small: 100,
+  medium: 150,
+  large: 200,
+};
 
 export function VideoThumbnail({
   thumbnailUrl,
@@ -21,6 +34,7 @@ export function VideoThumbnail({
   onClick,
   className,
   priority = false,
+  size = "medium",
 }: VideoThumbnailProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -33,6 +47,24 @@ export function VideoThumbnail({
     setIsLoading(false);
     setHasError(true);
   }, []);
+
+  // Generate optimized image attributes
+  const imageAttrs = useMemo(() => {
+    if (!thumbnailUrl) return null;
+    
+    if (!isSupabaseStorageUrl(thumbnailUrl)) {
+      return { src: thumbnailUrl };
+    }
+
+    const baseWidth = sizeToBaseWidth[size];
+    const optimizedSrc = getOptimizedThumbnailUrl(thumbnailUrl, size);
+    const srcSet = getResponsiveSrcSet(thumbnailUrl, baseWidth, 80);
+
+    return {
+      src: optimizedSrc,
+      srcSet: srcSet || undefined,
+    };
+  }, [thumbnailUrl, size]);
 
   return (
     <div 
@@ -57,11 +89,12 @@ export function VideoThumbnail({
       {/* Thumbnail image or video fallback */}
       {!hasError && (
         <>
-          {thumbnailUrl ? (
+          {imageAttrs ? (
             <img
-              src={thumbnailUrl}
+              {...imageAttrs}
               alt={alt}
               loading={priority ? "eager" : "lazy"}
+              decoding={priority ? "sync" : "async"}
               onLoad={handleLoad}
               onError={handleError}
               className={cn(
