@@ -215,7 +215,7 @@ export default function SoundDetail() {
         </script>
       </Helmet>
 
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-safe-nav">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border p-4">
         <button onClick={() => navigate(-1)} className="p-1">

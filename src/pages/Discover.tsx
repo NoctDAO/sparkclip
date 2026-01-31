@@ -91,7 +91,7 @@ export default function Discover() {
         </script>
       </Helmet>
 
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="min-h-screen bg-background text-foreground pb-safe-nav">
       {/* Search Bar - Links to Search Page */}
       <div className="sticky top-0 z-40 bg-background p-4 border-b border-border">
         <button 
