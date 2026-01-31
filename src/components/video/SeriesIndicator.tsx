@@ -14,7 +14,7 @@ export function SeriesIndicator({ series, currentOrder, onClick }: SeriesIndicat
         e.stopPropagation();
         onClick?.();
       }}
-      className="flex items-center gap-1.5 px-2.5 py-1 bg-background/80 backdrop-blur-sm rounded-full text-xs font-medium text-foreground hover:bg-background/90 transition-colors"
+      className="w-fit flex items-center gap-1.5 px-2.5 py-1 bg-background/80 backdrop-blur-sm rounded-full text-xs font-medium text-foreground hover:bg-background/90 transition-colors"
     >
       <Layers className="w-3.5 h-3.5" />
       <span>
