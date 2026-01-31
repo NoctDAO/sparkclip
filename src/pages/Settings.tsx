@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { SettingsItem } from "@/components/settings/SettingsItem";
 import { UiMarginSetting } from "@/components/settings/UiMarginSetting";
+import { NavBarToggle } from "@/components/settings/NavBarToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -97,6 +98,7 @@ export default function Settings() {
           <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Display
           </h2>
+          <NavBarToggle />
           <UiMarginSetting />
         </div>
 
