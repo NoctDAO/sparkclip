@@ -235,6 +235,7 @@ export function VideoCard({
       {/* Comments Sheet */}
       <CommentsSheet
         videoId={video.id}
+        videoOwnerId={video.user_id}
         open={showComments}
         onOpenChange={setShowComments}
       />

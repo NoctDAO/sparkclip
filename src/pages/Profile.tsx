@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye } from "lucide-react";
+import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye, Lock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useRateLimit } from "@/hooks/useRateLimit";
+import { useUserPrivacy } from "@/hooks/useUserPrivacy";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile as ProfileType, Video } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,13 @@ export default function Profile() {
   const { toast } = useToast();
   const { isVerified } = useUserRoles(userId);
   const { checkRateLimit: checkFollowLimit } = useRateLimit("follow");
+  const { 
+    canViewLikedVideos, 
+    canViewFollowingList, 
+    canViewFollowersList,
+    isFollowing: privacyIsFollowing,
+    refetch: refetchPrivacy 
+  } = useUserPrivacy(userId);
   
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -38,12 +46,18 @@ export default function Profile() {
       if (user) {
         checkFollowing();
         if (isOwnProfile) {
-          fetchLikedVideos();
           fetchSavedVideos();
         }
       }
     }
   }, [userId, user]);
+
+  // Fetch liked videos when tab becomes visible (own profile or privacy allows)
+  useEffect(() => {
+    if (userId && (isOwnProfile || canViewLikedVideos())) {
+      fetchLikedVideos();
+    }
+  }, [userId, isOwnProfile, privacyIsFollowing]);
 
   const fetchProfile = async () => {
     const { data, error } = await supabase
@@ -139,6 +153,8 @@ export default function Profile() {
         setProfile({ ...profile, followers_count: profile.followers_count + 1 });
       }
     }
+    // Refetch privacy to update follow status for permission checks
+    refetchPrivacy();
   };
 
   const handleSignOut = async () => {
@@ -267,18 +283,24 @@ export default function Profile() {
         {/* Stats */}
         <div className="flex items-center gap-8 mt-4">
           <button
-            onClick={() => navigate(`/follow-list/${userId}?tab=following`)}
-            className="text-center hover:opacity-70 transition-opacity"
+            onClick={() => canViewFollowingList() && navigate(`/follow-list/${userId}?tab=following`)}
+            className={`text-center transition-opacity ${canViewFollowingList() ? 'hover:opacity-70' : 'cursor-default'}`}
           >
             <p className="font-bold text-lg">{formatCount(profile.following_count)}</p>
-            <p className="text-xs text-muted-foreground">Following</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-center">
+              Following
+              {!canViewFollowingList() && <Lock className="w-3 h-3" />}
+            </p>
           </button>
           <button
-            onClick={() => navigate(`/follow-list/${userId}?tab=followers`)}
-            className="text-center hover:opacity-70 transition-opacity"
+            onClick={() => canViewFollowersList() && navigate(`/follow-list/${userId}?tab=followers`)}
+            className={`text-center transition-opacity ${canViewFollowersList() ? 'hover:opacity-70' : 'cursor-default'}`}
           >
             <p className="font-bold text-lg">{formatCount(profile.followers_count)}</p>
-            <p className="text-xs text-muted-foreground">Followers</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-center">
+              Followers
+              {!canViewFollowersList() && <Lock className="w-3 h-3" />}
+            </p>
           </button>
           <div className="text-center">
             <p className="font-bold text-lg">{formatCount(profile.likes_count)}</p>
@@ -329,21 +351,22 @@ export default function Profile() {
           >
             <Grid3X3 className="w-5 h-5" />
           </TabsTrigger>
+          {/* Show liked videos tab if own profile OR if privacy allows */}
+          {(isOwnProfile || canViewLikedVideos()) && (
+            <TabsTrigger 
+              value="liked" 
+              className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+            >
+              <Heart className="w-5 h-5" />
+            </TabsTrigger>
+          )}
           {isOwnProfile && (
-            <>
-              <TabsTrigger 
-                value="liked" 
-                className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
-              >
-                <Heart className="w-5 h-5" />
-              </TabsTrigger>
-              <TabsTrigger 
-                value="saved" 
-                className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
-              >
-                <Bookmark className="w-5 h-5" />
-              </TabsTrigger>
-            </>
+            <TabsTrigger 
+              value="saved" 
+              className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+            >
+              <Bookmark className="w-5 h-5" />
+            </TabsTrigger>
           )}
         </TabsList>
 
@@ -385,66 +408,100 @@ export default function Profile() {
           )}
         </TabsContent>
 
-        {isOwnProfile && (
-          <>
-            <TabsContent value="liked" className="mt-0">
-              {likedVideos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                  <Heart className="w-12 h-12 mb-2" />
-                  <p>No liked videos yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-0.5">
-                  {likedVideos.map((video) => (
-                    <div 
-                      key={video.id} 
-                      className="aspect-[9/16] bg-secondary cursor-pointer relative"
-                      onClick={() => navigate(`/?video=${video.id}`)}
-                    >
-                      {video.thumbnail_url ? (
-                        <img src={video.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <video src={video.video_url} className="w-full h-full object-cover" muted />
-                      )}
-                      <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
-                        <Eye className="w-3 h-3" />
-                        <span>{formatCount(video.views_count)}</span>
-                      </div>
+        {/* Liked videos tab - show for own profile or when privacy allows */}
+        {(isOwnProfile || canViewLikedVideos()) && (
+          <TabsContent value="liked" className="mt-0">
+            {likedVideos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Heart className="w-12 h-12 mb-2" />
+                <p>No liked videos yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-0.5">
+                {likedVideos.map((video) => (
+                  <div 
+                    key={video.id} 
+                    className="aspect-[9/16] bg-secondary cursor-pointer relative"
+                    onClick={() => navigate(`/?video=${video.id}`)}
+                  >
+                    {video.thumbnail_url ? (
+                      <img src={video.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={video.video_url} className="w-full h-full object-cover" muted />
+                    )}
+                    <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                      <Eye className="w-3 h-3" />
+                      <span>{formatCount(video.views_count)}</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
 
-            <TabsContent value="saved" className="mt-0">
-              {savedVideos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                  <Bookmark className="w-12 h-12 mb-2" />
-                  <p>No saved videos yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-0.5">
-                  {savedVideos.map((video) => (
-                    <div 
-                      key={video.id} 
-                      className="aspect-[9/16] bg-secondary cursor-pointer relative"
-                      onClick={() => navigate(`/?video=${video.id}`)}
-                    >
-                      {video.thumbnail_url ? (
-                        <img src={video.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <video src={video.video_url} className="w-full h-full object-cover" muted />
-                      )}
-                      <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
-                        <Eye className="w-3 h-3" />
-                        <span>{formatCount(video.views_count)}</span>
-                      </div>
+        {/* Saved videos tab - only for own profile */}
+        {isOwnProfile && (
+          <TabsContent value="saved" className="mt-0">
+            {savedVideos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Bookmark className="w-12 h-12 mb-2" />
+                <p>No saved videos yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-0.5">
+                {savedVideos.map((video) => (
+                  <div 
+                    key={video.id} 
+                    className="aspect-[9/16] bg-secondary cursor-pointer relative"
+                    onClick={() => navigate(`/?video=${video.id}`)}
+                  >
+                    {video.thumbnail_url ? (
+                      <img src={video.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={video.video_url} className="w-full h-full object-cover" muted />
+                    )}
+                    <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                      <Eye className="w-3 h-3" />
+                      <span>{formatCount(video.views_count)}</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
+
+        {/* Saved videos tab - only for own profile */}
+        {isOwnProfile && (
+          <TabsContent value="saved" className="mt-0">
+            {savedVideos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Bookmark className="w-12 h-12 mb-2" />
+                <p>No saved videos yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-0.5">
+                {savedVideos.map((video) => (
+                  <div 
+                    key={video.id} 
+                    className="aspect-[9/16] bg-secondary cursor-pointer relative"
+                    onClick={() => navigate(`/?video=${video.id}`)}
+                  >
+                    {video.thumbnail_url ? (
+                      <img src={video.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={video.video_url} className="w-full h-full object-cover" muted />
+                    )}
+                    <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
+                      <Eye className="w-3 h-3" />
+                      <span>{formatCount(video.views_count)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         )}
       </Tabs>
 
