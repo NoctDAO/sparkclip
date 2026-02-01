@@ -21,11 +21,9 @@ export function useBanStatus(userId: string | undefined) {
     }
 
     const checkBanStatus = async () => {
+      // Use secure function that doesn't expose banned_by field
       const { data, error } = await supabase
-        .from("banned_users")
-        .select("reason, expires_at, banned_at")
-        .eq("user_id", userId)
-        .maybeSingle();
+        .rpc("get_my_ban_status");
 
       if (error) {
         console.error("Error checking ban status:", error);
@@ -33,27 +31,14 @@ export function useBanStatus(userId: string | undefined) {
         return;
       }
 
-      if (data) {
-        // Check if ban is expired
-        const isExpired = data.expires_at && new Date(data.expires_at) < new Date();
-        
-        if (isExpired) {
-          // Ban has expired, delete it
-          await supabase
-            .from("banned_users")
-            .delete()
-            .eq("user_id", userId);
-          
-          setIsBanned(false);
-          setBanInfo(null);
-        } else {
-          setIsBanned(true);
-          setBanInfo({
-            reason: data.reason,
-            expires_at: data.expires_at,
-            banned_at: data.banned_at,
-          });
-        }
+      if (data && data.length > 0) {
+        const ban = data[0];
+        setIsBanned(true);
+        setBanInfo({
+          reason: ban.reason,
+          expires_at: ban.expires_at,
+          banned_at: ban.banned_at,
+        });
       } else {
         setIsBanned(false);
         setBanInfo(null);
