@@ -161,6 +161,10 @@ export type Database = {
           id: string
           image_url: string | null
           impressions_count: number
+          last_100_alert_at: string | null
+          last_80_alert_at: string | null
+          last_95_alert_at: string | null
+          last_daily_alert_at: string | null
           last_daily_reset: string | null
           paused_reason: string | null
           priority: number
@@ -191,6 +195,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           impressions_count?: number
+          last_100_alert_at?: string | null
+          last_80_alert_at?: string | null
+          last_95_alert_at?: string | null
+          last_daily_alert_at?: string | null
           last_daily_reset?: string | null
           paused_reason?: string | null
           priority?: number
@@ -221,6 +229,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           impressions_count?: number
+          last_100_alert_at?: string | null
+          last_80_alert_at?: string | null
+          last_95_alert_at?: string | null
+          last_daily_alert_at?: string | null
           last_daily_reset?: string | null
           paused_reason?: string | null
           priority?: number
@@ -234,6 +246,45 @@ export type Database = {
           total_spent?: number | null
           updated_at?: string
           video_url?: string | null
+        }
+        Relationships: []
+      }
+      advertiser_notification_preferences: {
+        Row: {
+          alert_threshold_100: boolean
+          alert_threshold_80: boolean
+          alert_threshold_95: boolean
+          budget_alert_email: boolean
+          budget_alert_in_app: boolean
+          created_at: string
+          custom_threshold_percent: number | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_threshold_100?: boolean
+          alert_threshold_80?: boolean
+          alert_threshold_95?: boolean
+          budget_alert_email?: boolean
+          budget_alert_in_app?: boolean
+          created_at?: string
+          custom_threshold_percent?: number | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_threshold_100?: boolean
+          alert_threshold_80?: boolean
+          alert_threshold_95?: boolean
+          budget_alert_email?: boolean
+          budget_alert_in_app?: boolean
+          created_at?: string
+          custom_threshold_percent?: number | null
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -352,6 +403,50 @@ export type Database = {
             columns: ["video_id"]
             isOneToOne: false
             referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_alerts: {
+        Row: {
+          ad_id: string
+          alert_type: string
+          budget_type: string
+          created_at: string
+          current_value: number
+          id: string
+          notified_via: string[] | null
+          threshold_value: number
+          user_id: string
+        }
+        Insert: {
+          ad_id: string
+          alert_type: string
+          budget_type: string
+          created_at?: string
+          current_value: number
+          id?: string
+          notified_via?: string[] | null
+          threshold_value: number
+          user_id: string
+        }
+        Update: {
+          ad_id?: string
+          alert_type?: string
+          budget_type?: string
+          created_at?: string
+          current_value?: number
+          id?: string
+          notified_via?: string[] | null
+          threshold_value?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_alerts_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
             referencedColumns: ["id"]
           },
         ]
