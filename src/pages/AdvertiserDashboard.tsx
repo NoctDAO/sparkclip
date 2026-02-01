@@ -4,7 +4,7 @@ import {
   Plus, Edit2, BarChart3, Play, Pause, Calendar, 
   ExternalLink, Upload, X, Image, Video, Hash, 
   Users, Target, TrendingUp, Eye, MousePointer,
-  ArrowLeft, DollarSign, Wallet
+  ArrowLeft, DollarSign, Wallet, LineChart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { useToast } from "@/hooks/use-toast";
 import { Ad, INTEREST_CATEGORIES } from "@/types/ad";
 import { BudgetStatusCard } from "@/components/advertiser/BudgetStatusCard";
+import { AdPreview } from "@/components/advertiser/AdPreview";
 
 type AdStatus = "draft" | "active" | "paused" | "scheduled" | "ended";
 
@@ -402,23 +403,35 @@ export default function AdvertiserDashboard() {
               <p className="text-muted-foreground">Manage your ad campaigns and view performance</p>
             </div>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Campaign
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingAd ? "Edit Campaign" : "Create New Campaign"}</DialogTitle>
-                <DialogDescription>
-                  {editingAd ? "Update your ad campaign details" : "Set up a new advertisement campaign"}
-                </DialogDescription>
-              </DialogHeader>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate("/advertiser/analytics")}>
+              <LineChart className="w-4 h-4 mr-2" />
+              Analytics
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Campaign
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingAd ? "Edit Campaign" : "Create New Campaign"}</DialogTitle>
+                  <DialogDescription>
+                    {editingAd ? "Update your ad campaign details" : "Set up a new advertisement campaign"}
+                  </DialogDescription>
+                </DialogHeader>
 
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <Tabs defaultValue="details" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="details">Campaign Details</TabsTrigger>
+                    <TabsTrigger value="preview">Live Preview</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="details" className="mt-4">
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Campaign Title *</Label>
                     <Input
@@ -834,19 +847,38 @@ export default function AdvertiserDashboard() {
                       <BudgetStatusCard adId={editingAd.id} compact />
                     </div>
                   )}
-                </div>
-              </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="preview" className="mt-4">
+                    <div className="flex justify-center py-4">
+                      <AdPreview 
+                        data={{
+                          title: formData.title,
+                          description: formData.description,
+                          video_url: formData.video_url,
+                          image_url: formData.image_url,
+                          click_url: formData.click_url,
+                          advertiser_name: formData.advertiser_name,
+                          advertiser_logo_url: formData.advertiser_logo_url,
+                        }}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveAd} disabled={saving}>
-                  {saving ? "Saving..." : editingAd ? "Update Campaign" : "Create Campaign"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveAd} disabled={saving}>
+                    {saving ? "Saving..." : editingAd ? "Update Campaign" : "Create Campaign"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Stats Overview */}
