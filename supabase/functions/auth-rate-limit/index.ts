@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  isValidEmail,
+  isValidPassword,
+  isValidAuthAction,
+  sanitizeString,
+  validationErrorResponse,
+} from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +21,12 @@ const WINDOW_MINUTES = 15;
 interface RateLimitEntry {
   attempts: number;
   window_start: string;
+}
+
+interface AuthRequest {
+  action: string;
+  email: string;
+  password: string;
 }
 
 serve(async (req) => {
@@ -33,14 +46,33 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, email, password } = await req.json();
-
-    if (!action || !email || !password) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Parse and validate request body
+    let body: AuthRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return validationErrorResponse(["Invalid JSON body"], corsHeaders);
     }
+
+    const { action, email, password } = body;
+
+    // Validate action
+    if (!isValidAuthAction(action)) {
+      return validationErrorResponse(["Invalid action. Must be 'signin' or 'signup'"], corsHeaders);
+    }
+
+    // Validate email
+    if (!isValidEmail(email)) {
+      return validationErrorResponse(["Invalid email format"], corsHeaders);
+    }
+
+    // Validate password
+    if (!isValidPassword(password)) {
+      return validationErrorResponse(["Password must be between 8 and 128 characters"], corsHeaders);
+    }
+
+    // Sanitize email (trim whitespace, lowercase)
+    const sanitizedEmail = sanitizeString(email).toLowerCase();
 
     // Check rate limit for this IP
     const windowStart = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString();
@@ -85,13 +117,13 @@ serve(async (req) => {
         });
     }
 
-    // Perform the auth action using admin client
+    // Perform the auth action using admin client with sanitized email
     let result;
     if (action === "signin") {
-      result = await supabase.auth.signInWithPassword({ email, password });
+      result = await supabase.auth.signInWithPassword({ email: sanitizedEmail, password });
     } else if (action === "signup") {
       result = await supabase.auth.signUp({ 
-        email, 
+        email: sanitizedEmail, 
         password,
         options: {
           emailRedirectTo: req.headers.get("origin") || undefined,

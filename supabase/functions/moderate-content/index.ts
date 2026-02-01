@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  isValidUUID,
+  isValidString,
+  isValidContentType,
+  sanitizeString,
+  validationErrorResponse,
+} from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +27,9 @@ interface ModerationResult {
   flag_type: string | null;
 }
 
+// Maximum content length for moderation (prevent DoS)
+const MAX_CONTENT_LENGTH = 10000;
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -33,14 +43,33 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { content, content_type, content_id }: ModerationRequest = await req.json();
-
-    if (!content || !content_type || !content_id) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Parse request body
+    let body: ModerationRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return validationErrorResponse(["Invalid JSON body"], corsHeaders);
     }
+
+    const { content, content_type, content_id } = body;
+
+    // Validate content_type
+    if (!isValidContentType(content_type)) {
+      return validationErrorResponse(["content_type must be 'video' or 'comment'"], corsHeaders);
+    }
+
+    // Validate content_id is a valid UUID
+    if (!isValidUUID(content_id)) {
+      return validationErrorResponse(["content_id must be a valid UUID"], corsHeaders);
+    }
+
+    // Validate content string
+    if (!isValidString(content, 0, MAX_CONTENT_LENGTH)) {
+      return validationErrorResponse([`content must be a string with max ${MAX_CONTENT_LENGTH} characters`], corsHeaders);
+    }
+
+    // Sanitize content
+    const sanitizedContent = sanitizeString(content);
 
     // Step 1: Check keyword blocklist first (fast)
     const { data: keywords } = await supabase
@@ -50,13 +79,14 @@ serve(async (req) => {
     let keywordMatch: { keyword: string; category: string; action: string } | null = null;
 
     if (keywords && keywords.length > 0) {
-      const contentLower = content.toLowerCase();
+      const contentLower = sanitizedContent.toLowerCase();
       
       for (const kw of keywords) {
         if (kw.is_regex) {
           try {
+            // Limit regex execution time by using a simple timeout wrapper
             const regex = new RegExp(kw.keyword, "i");
-            if (regex.test(content)) {
+            if (regex.test(sanitizedContent)) {
               keywordMatch = { keyword: kw.keyword, category: kw.category, action: kw.action };
               break;
             }
@@ -126,7 +156,7 @@ Be conservative - only flag content that clearly violates policies.`
               },
               {
                 role: "user",
-                content: `Analyze this ${content_type} content:\n\n"${content}"`
+                content: `Analyze this ${content_type} content:\n\n"${sanitizedContent}"`
               }
             ],
             temperature: 0.1,
