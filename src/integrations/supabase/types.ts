@@ -128,6 +128,9 @@ export type Database = {
           priority: number
           start_date: string | null
           status: string
+          target_creators: string[] | null
+          target_hashtags: string[] | null
+          target_interests: string[] | null
           title: string
           updated_at: string
           video_url: string | null
@@ -147,6 +150,9 @@ export type Database = {
           priority?: number
           start_date?: string | null
           status?: string
+          target_creators?: string[] | null
+          target_hashtags?: string[] | null
+          target_interests?: string[] | null
           title: string
           updated_at?: string
           video_url?: string | null
@@ -166,6 +172,9 @@ export type Database = {
           priority?: number
           start_date?: string | null
           status?: string
+          target_creators?: string[] | null
+          target_hashtags?: string[] | null
+          target_interests?: string[] | null
           title?: string
           updated_at?: string
           video_url?: string | null
