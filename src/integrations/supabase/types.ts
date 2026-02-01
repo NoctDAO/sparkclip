@@ -1311,6 +1311,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_ad_clicks: { Args: { p_ad_id: string }; Returns: undefined }
+      increment_ad_impressions: {
+        Args: { p_ad_id: string }
+        Returns: undefined
+      }
       increment_view_count: { Args: { video_id: string }; Returns: undefined }
       refresh_trending_cache: { Args: never; Returns: undefined }
     }
