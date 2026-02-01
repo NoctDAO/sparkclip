@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Shield, ShieldCheck, ShieldX, MoreHorizontal, CheckCircle, Ban, UserX } from "lucide-react";
+import { Search, Shield, ShieldCheck, ShieldX, MoreHorizontal, CheckCircle, Ban, UserX, Megaphone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +52,7 @@ interface UserProfile {
   } | null;
 }
 
-type ActionType = "verify" | "unverify" | "make_mod" | "remove_mod" | "ban" | "unban";
+type ActionType = "verify" | "unverify" | "make_mod" | "remove_mod" | "make_advertiser" | "remove_advertiser" | "ban" | "unban";
 
 const BAN_DURATIONS = [
   { value: "1", label: "1 day" },
@@ -232,6 +232,14 @@ export function UserManagement() {
             roleToModify = "moderator";
             isAdding = false;
             break;
+          case "make_advertiser":
+            roleToModify = "advertiser";
+            isAdding = true;
+            break;
+          case "remove_advertiser":
+            roleToModify = "advertiser";
+            isAdding = false;
+            break;
         }
 
         if (roleToModify) {
@@ -289,6 +297,10 @@ export function UserManagement() {
         return { title: "Make Moderator", desc: "Grant moderator permissions to this user?" };
       case "remove_mod":
         return { title: "Remove Moderator", desc: "Remove moderator permissions from this user?" };
+      case "make_advertiser":
+        return { title: "Grant Advertiser", desc: "Grant advertiser permissions to this user? They will be able to create ad campaigns." };
+      case "remove_advertiser":
+        return { title: "Remove Advertiser", desc: "Remove advertiser permissions from this user?" };
       case "ban":
         return { title: "Ban User", desc: "This will prevent the user from accessing the platform." };
       case "unban":
@@ -351,6 +363,12 @@ export function UserManagement() {
                     )}
                     {userProfile.roles.includes("moderator") && (
                       <Badge variant="secondary" className="text-xs">Mod</Badge>
+                    )}
+                    {userProfile.roles.includes("advertiser") && (
+                      <Badge className="text-xs bg-amber-500/20 text-amber-600 border-amber-500/30">
+                        <Megaphone className="w-3 h-3 mr-1" />
+                        Advertiser
+                      </Badge>
                     )}
                     {userProfile.ban && (
                       <Badge variant="destructive" className="text-xs">
@@ -425,6 +443,29 @@ export function UserManagement() {
                     >
                       <Shield className="w-4 h-4 mr-2" />
                       Make Moderator
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  {userProfile.roles.includes("advertiser") ? (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedUser(userProfile);
+                        setActionDialog({ open: true, action: "remove_advertiser" });
+                      }}
+                      className="text-destructive"
+                    >
+                      <Megaphone className="w-4 h-4 mr-2" />
+                      Remove Advertiser
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedUser(userProfile);
+                        setActionDialog({ open: true, action: "make_advertiser" });
+                      }}
+                    >
+                      <Megaphone className="w-4 h-4 mr-2" />
+                      Grant Advertiser
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
