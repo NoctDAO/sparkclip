@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { VideoCard } from "./VideoCard";
+import { AdCard } from "./AdCard";
+import { AdSenseUnit } from "@/components/ads/AdSenseUnit";
 import { Video } from "@/types/video";
+import { FeedItem, Ad, AdSettings } from "@/types/ad";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBlockedUsers } from "@/hooks/useBlockedUsers";
@@ -29,6 +32,9 @@ export function VideoFeed({
     bookmarks: Set<string>;
     following: Set<string>;
   }>({ likes: new Set(), bookmarks: new Set(), following: new Set() });
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [adSettings, setAdSettings] = useState<AdSettings | null>(null);
+  const shownAdIds = useRef<Set<string>>(new Set());
   
   const blockedUserIds = blockedUsers.map(b => b.blocked_user_id);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -273,14 +279,45 @@ export function VideoFeed({
     });
   }, [user]);
 
+  // Fetch ads and settings
+  const fetchAds = useCallback(async () => {
+    const [adsRes, settingsRes] = await Promise.all([
+      supabase
+        .from("ads")
+        .select("*")
+        .eq("status", "active")
+        .order("priority", { ascending: false }),
+      supabase
+        .from("ad_settings")
+        .select("*")
+        .limit(1)
+        .single(),
+    ]);
+
+    if (adsRes.data) {
+      // Filter by date range
+      const now = new Date();
+      const activeAds = (adsRes.data as Ad[]).filter((ad) => {
+        if (ad.start_date && new Date(ad.start_date) > now) return false;
+        if (ad.end_date && new Date(ad.end_date) < now) return false;
+        return true;
+      });
+      setAds(activeAds);
+    }
+    if (settingsRes.data) {
+      setAdSettings(settingsRes.data as AdSettings);
+    }
+  }, []);
+
   useEffect(() => {
     fetchVideos();
+    fetchAds();
     // Only fetch user interactions separately if not using optimized query
     // The optimized query returns interaction flags directly
     if (!user) {
       fetchUserInteractions();
     }
-  }, [fetchVideos]);
+  }, [fetchVideos, fetchAds]);
 
   // Handle in-feed series navigation
   const handleSeriesNavigation = useCallback((newVideo: Video) => {
@@ -307,6 +344,38 @@ export function VideoFeed({
     }
   }, [videos, currentIndex]);
 
+  // Build feed items with ads injected at intervals
+  const feedItems = useMemo((): FeedItem[] => {
+    const items: FeedItem[] = [];
+    const frequency = adSettings?.ad_frequency || 5;
+    const customAdsEnabled = adSettings?.custom_ads_enabled ?? true;
+    const adsenseEnabled = adSettings?.adsense_enabled ?? false;
+    
+    let adIndex = 0;
+
+    videos.forEach((video, index) => {
+      items.push({ type: "video", data: video });
+
+      // Insert ad after every N videos (but not after the last one)
+      const position = index + 1;
+      if (position % frequency === 0 && index < videos.length - 1) {
+        if (customAdsEnabled && ads.length > 0) {
+          // Rotate through available ads
+          const ad = ads[adIndex % ads.length];
+          if (!shownAdIds.current.has(ad.id)) {
+            shownAdIds.current.add(ad.id);
+          }
+          items.push({ type: "ad", data: ad });
+          adIndex++;
+        } else if (adsenseEnabled && adSettings?.adsense_slot_id) {
+          items.push({ type: "adsense", slotId: adSettings.adsense_slot_id });
+        }
+      }
+    });
+
+    return items;
+  }, [videos, ads, adSettings]);
+
   const handleScroll = () => {
     const container = containerRef.current;
     if (!container) return;
@@ -315,7 +384,7 @@ export function VideoFeed({
     const itemHeight = container.clientHeight;
     const newIndex = Math.round(scrollTop / itemHeight);
     
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < videos.length) {
+    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < feedItems.length) {
       setCurrentIndex(newIndex);
     }
 
@@ -372,19 +441,47 @@ export function VideoFeed({
       onTouchMove={handleTouchMove}
       className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
     >
-      {videos.map((video, index) => (
-        <div key={video.id} className="h-full w-full snap-start snap-always">
-          <VideoCard
-            video={video}
-            isActive={index === currentIndex}
-            isLiked={userInteractions.likes.has(video.id)}
-            isBookmarked={userInteractions.bookmarks.has(video.id)}
-            isFollowing={userInteractions.following.has(video.user_id)}
-            bottomNavVisible={bottomNavVisible}
-            onSeriesNavigate={handleSeriesNavigation}
-          />
-        </div>
-      ))}
+      {feedItems.map((item, index) => {
+        if (item.type === "video") {
+          const video = item.data as Video;
+          return (
+            <div key={`video-${video.id}`} className="h-full w-full snap-start snap-always">
+              <VideoCard
+                video={video}
+                isActive={index === currentIndex}
+                isLiked={userInteractions.likes.has(video.id)}
+                isBookmarked={userInteractions.bookmarks.has(video.id)}
+                isFollowing={userInteractions.following.has(video.user_id)}
+                bottomNavVisible={bottomNavVisible}
+                onSeriesNavigate={handleSeriesNavigation}
+              />
+            </div>
+          );
+        } else if (item.type === "ad") {
+          const ad = item.data as Ad;
+          return (
+            <div key={`ad-${ad.id}-${index}`} className="h-full w-full snap-start snap-always">
+              <AdCard
+                ad={ad}
+                isActive={index === currentIndex}
+                bottomNavVisible={bottomNavVisible}
+              />
+            </div>
+          );
+        } else if (item.type === "adsense") {
+          return (
+            <div key={`adsense-${index}`} className="h-full w-full snap-start snap-always">
+              <AdSenseUnit
+                clientId={adSettings?.adsense_client_id || ""}
+                slotId={item.slotId}
+                isActive={index === currentIndex}
+                bottomNavVisible={bottomNavVisible}
+              />
+            </div>
+          );
+        }
+        return null;
+      })}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Shield, Users, Flag, FileVideo, Ban, ListChecks, AlertTriangle, History, Zap, BookX, Lock } from "lucide-react";
+import { ArrowLeft, Shield, Users, Flag, FileVideo, Ban, ListChecks, AlertTriangle, History, Zap, BookX, Lock, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +17,7 @@ import { AdminLogs } from "@/components/admin/AdminLogs";
 import { FlaggedContent } from "@/components/admin/FlaggedContent";
 import { KeywordManagement } from "@/components/admin/KeywordManagement";
 import { SecurityAuditLogs } from "@/components/admin/SecurityAuditLogs";
+import { AdsManagement } from "@/components/admin/AdsManagement";
 
 interface DashboardStats {
   totalUsers: number;
@@ -188,7 +189,7 @@ export default function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="queue" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 md:grid-cols-8 h-auto">
+          <TabsList className="w-full grid grid-cols-5 md:grid-cols-9 h-auto">
             <TabsTrigger value="queue" className="gap-1 text-xs md:text-sm px-2">
               <ListChecks className="w-4 h-4" />
               <span className="hidden sm:inline">Queue</span>
@@ -219,6 +220,10 @@ export default function AdminDashboard() {
                   {stats.pendingAppeals}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="ads" className="gap-1 text-xs md:text-sm px-2">
+              <Megaphone className="w-4 h-4" />
+              <span className="hidden sm:inline">Ads</span>
             </TabsTrigger>
             <TabsTrigger value="keywords" className="gap-1 text-xs md:text-sm px-2">
               <BookX className="w-4 h-4" />
@@ -252,6 +257,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="appeals" className="mt-4">
             <AppealsManagement />
+          </TabsContent>
+
+          <TabsContent value="ads" className="mt-4">
+            <AdsManagement />
           </TabsContent>
 
           <TabsContent value="keywords" className="mt-4">
