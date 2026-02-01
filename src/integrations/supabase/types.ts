@@ -1158,6 +1158,14 @@ export type Database = {
           report_ids: string[]
         }[]
       }
+      get_my_ban_status: {
+        Args: never
+        Returns: {
+          banned_at: string
+          expires_at: string
+          reason: string
+        }[]
+      }
       get_video_analytics: {
         Args: { p_video_id: string }
         Returns: {
