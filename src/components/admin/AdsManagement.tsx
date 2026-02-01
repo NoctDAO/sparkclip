@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, BarChart3, Play, Pause, Calendar, ExternalLink } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Edit2, Trash2, BarChart3, Play, Pause, Calendar, ExternalLink, Upload, X, Image, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +57,12 @@ export function AdsManagement() {
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [formData, setFormData] = useState<AdFormData>(defaultFormData);
   const [saving, setSaving] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -96,6 +103,47 @@ export function AdsManagement() {
       setFormData(defaultFormData);
     }
     setDialogOpen(true);
+  };
+
+  const handleFileUpload = async (
+    file: File,
+    type: "video" | "image" | "logo",
+    setUploading: (v: boolean) => void
+  ) => {
+    if (!file) return;
+
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${type}s/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("ad-creatives")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("ad-creatives")
+        .getPublicUrl(filePath);
+
+      if (type === "video") {
+        setFormData((prev) => ({ ...prev, video_url: publicUrl }));
+      } else if (type === "image") {
+        setFormData((prev) => ({ ...prev, image_url: publicUrl }));
+      } else if (type === "logo") {
+        setFormData((prev) => ({ ...prev, advertiser_logo_url: publicUrl }));
+      }
+
+      toast({ title: `${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully` });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({ title: `Failed to upload ${type}`, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSaveAd = async () => {
@@ -345,25 +393,128 @@ export function AdsManagement() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="video_url">Video URL</Label>
-                      <Input
-                        id="video_url"
-                        placeholder="https://..."
-                        value={formData.video_url}
-                        onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="image_url">Image URL (fallback)</Label>
-                      <Input
-                        id="image_url"
-                        placeholder="https://..."
-                        value={formData.image_url}
-                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      />
-                    </div>
+                  <div className="space-y-4">
+                    <Label>Video Creative</Label>
+                    <Tabs defaultValue={formData.video_url ? "url" : "upload"} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="upload">Upload</TabsTrigger>
+                        <TabsTrigger value="url">URL</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="upload" className="mt-2">
+                        <input
+                          ref={videoInputRef}
+                          type="file"
+                          accept="video/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, "video", setUploadingVideo);
+                          }}
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => videoInputRef.current?.click()}
+                            disabled={uploadingVideo}
+                          >
+                            {uploadingVideo ? (
+                              <span className="animate-pulse">Uploading...</span>
+                            ) : (
+                              <>
+                                <Video className="w-4 h-4 mr-2" />
+                                Choose Video
+                              </>
+                            )}
+                          </Button>
+                          {formData.video_url && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setFormData({ ...formData, video_url: "" })}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {formData.video_url && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {formData.video_url}
+                          </p>
+                        )}
+                      </TabsContent>
+                      <TabsContent value="url" className="mt-2">
+                        <Input
+                          placeholder="https://..."
+                          value={formData.video_url}
+                          onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label>Image Creative (fallback)</Label>
+                    <Tabs defaultValue={formData.image_url ? "url" : "upload"} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="upload">Upload</TabsTrigger>
+                        <TabsTrigger value="url">URL</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="upload" className="mt-2">
+                        <input
+                          ref={imageInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, "image", setUploadingImage);
+                          }}
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => imageInputRef.current?.click()}
+                            disabled={uploadingImage}
+                          >
+                            {uploadingImage ? (
+                              <span className="animate-pulse">Uploading...</span>
+                            ) : (
+                              <>
+                                <Image className="w-4 h-4 mr-2" />
+                                Choose Image
+                              </>
+                            )}
+                          </Button>
+                          {formData.image_url && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setFormData({ ...formData, image_url: "" })}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {formData.image_url && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {formData.image_url}
+                          </p>
+                        )}
+                      </TabsContent>
+                      <TabsContent value="url" className="mt-2">
+                        <Input
+                          placeholder="https://..."
+                          value={formData.image_url}
+                          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                        />
+                      </TabsContent>
+                    </Tabs>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -377,13 +528,57 @@ export function AdsManagement() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="logo_url">Advertiser Logo URL</Label>
-                      <Input
-                        id="logo_url"
-                        placeholder="https://..."
-                        value={formData.advertiser_logo_url}
-                        onChange={(e) => setFormData({ ...formData, advertiser_logo_url: e.target.value })}
+                      <Label htmlFor="logo_url">Advertiser Logo</Label>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, "logo", setUploadingLogo);
+                        }}
                       />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => logoInputRef.current?.click()}
+                          disabled={uploadingLogo}
+                        >
+                          {uploadingLogo ? (
+                            <span className="animate-pulse">Uploading...</span>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              Upload Logo
+                            </>
+                          )}
+                        </Button>
+                        {formData.advertiser_logo_url && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFormData({ ...formData, advertiser_logo_url: "" })}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      {formData.advertiser_logo_url && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <img
+                            src={formData.advertiser_logo_url}
+                            alt="Logo preview"
+                            className="w-8 h-8 rounded object-cover"
+                          />
+                          <p className="text-xs text-muted-foreground truncate flex-1">
+                            {formData.advertiser_logo_url}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
