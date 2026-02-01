@@ -4,7 +4,7 @@ import {
   Plus, Edit2, BarChart3, Play, Pause, Calendar, 
   ExternalLink, Upload, X, Image, Video, Hash, 
   Users, Target, TrendingUp, Eye, MousePointer,
-  ArrowLeft
+  ArrowLeft, DollarSign, Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useToast } from "@/hooks/use-toast";
 import { Ad, INTEREST_CATEGORIES } from "@/types/ad";
+import { BudgetStatusCard } from "@/components/advertiser/BudgetStatusCard";
 
 type AdStatus = "draft" | "active" | "paused" | "scheduled" | "ended";
 
@@ -40,6 +41,10 @@ interface AdFormData {
   target_hashtags: string;
   target_creators: string;
   target_interests: string[];
+  total_budget: string;
+  daily_budget: string;
+  cost_per_impression: string;
+  cost_per_click: string;
 }
 
 const defaultFormData: AdFormData = {
@@ -57,6 +62,10 @@ const defaultFormData: AdFormData = {
   target_hashtags: "",
   target_creators: "",
   target_interests: [],
+  total_budget: "",
+  daily_budget: "",
+  cost_per_impression: "0.001",
+  cost_per_click: "0.01",
 };
 
 interface AdAnalyticsData {
@@ -94,6 +103,15 @@ export default function AdvertiserDashboard() {
   const totalClicks = ads.reduce((sum, ad) => sum + ad.clicks_count, 0);
   const overallCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0.00";
   const activeAds = ads.filter(ad => ad.status === "active").length;
+  const totalSpent = ads.reduce((sum, ad) => sum + (ad.total_spent || 0), 0);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
 
   useEffect(() => {
     if (!authLoading && !rolesLoading) {
@@ -173,6 +191,10 @@ export default function AdvertiserDashboard() {
         target_hashtags: ad.target_hashtags?.join(", ") || "",
         target_creators: ad.target_creators?.join(", ") || "",
         target_interests: ad.target_interests || [],
+        total_budget: ad.total_budget?.toString() || "",
+        daily_budget: ad.daily_budget?.toString() || "",
+        cost_per_impression: ad.cost_per_impression?.toString() || "0.001",
+        cost_per_click: ad.cost_per_click?.toString() || "0.01",
       });
     } else {
       setEditingAd(null);
@@ -291,6 +313,10 @@ export default function AdvertiserDashboard() {
       target_hashtags: targetHashtags.length > 0 ? targetHashtags : null,
       target_creators: targetCreators.length > 0 ? targetCreators : null,
       target_interests: formData.target_interests.length > 0 ? formData.target_interests : null,
+      total_budget: formData.total_budget ? parseFloat(formData.total_budget) : null,
+      daily_budget: formData.daily_budget ? parseFloat(formData.daily_budget) : null,
+      cost_per_impression: formData.cost_per_impression ? parseFloat(formData.cost_per_impression) : 0.001,
+      cost_per_click: formData.cost_per_click ? parseFloat(formData.cost_per_click) : 0.01,
     };
 
     if (editingAd) {
@@ -714,6 +740,101 @@ export default function AdvertiserDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Budget Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    Budget & Pricing
+                  </h4>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="total_budget" className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" />
+                        Total Budget (USD)
+                      </Label>
+                      <Input
+                        id="total_budget"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="No limit"
+                        value={formData.total_budget}
+                        onChange={(e) => setFormData({ ...formData, total_budget: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Campaign pauses when total budget is reached
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="daily_budget" className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" />
+                        Daily Budget (USD)
+                      </Label>
+                      <Input
+                        id="daily_budget"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="No limit"
+                        value={formData.daily_budget}
+                        onChange={(e) => setFormData({ ...formData, daily_budget: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Resets daily at midnight UTC
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cost_per_impression">Cost per Impression (CPM)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <Input
+                          id="cost_per_impression"
+                          type="number"
+                          min="0"
+                          step="0.0001"
+                          className="pl-7"
+                          value={formData.cost_per_impression}
+                          onChange={(e) => setFormData({ ...formData, cost_per_impression: e.target.value })}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Charged per ad view
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="cost_per_click">Cost per Click (CPC)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <Input
+                          id="cost_per_click"
+                          type="number"
+                          min="0"
+                          step="0.001"
+                          className="pl-7"
+                          value={formData.cost_per_click}
+                          onChange={(e) => setFormData({ ...formData, cost_per_click: e.target.value })}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Charged when user clicks
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Budget Preview for editing */}
+                  {editingAd && (
+                    <div className="pt-2">
+                      <BudgetStatusCard adId={editingAd.id} compact />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <DialogFooter>
@@ -729,7 +850,7 @@ export default function AdvertiserDashboard() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active Campaigns</CardTitle>
@@ -772,6 +893,17 @@ export default function AdvertiserDashboard() {
               <div className="text-2xl font-bold">{overallCTR}%</div>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Total Spent
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalSpent)}</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Campaigns Table */}
@@ -797,6 +929,7 @@ export default function AdvertiserDashboard() {
                   <TableRow>
                     <TableHead>Campaign</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Budget</TableHead>
                     <TableHead>Schedule</TableHead>
                     <TableHead className="text-right">Impressions</TableHead>
                     <TableHead className="text-right">Clicks</TableHead>
@@ -831,6 +964,9 @@ export default function AdvertiserDashboard() {
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(ad.status)}</TableCell>
+                      <TableCell>
+                        <BudgetStatusCard adId={ad.id} compact />
+                      </TableCell>
                       <TableCell>
                         <div className="text-sm">
                           {ad.start_date && (
