@@ -30,6 +30,10 @@ interface ModerationResult {
 // Maximum content length for moderation (prevent DoS)
 const MAX_CONTENT_LENGTH = 10000;
 
+// Rate limit config: 30 moderation requests per 5 minutes per IP
+const MAX_MODERATION_ATTEMPTS = 30;
+const WINDOW_MINUTES = 5;
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -37,11 +41,64 @@ serve(async (req) => {
   }
 
   try {
+    // Get client IP for rate limiting
+    const forwarded = req.headers.get("x-forwarded-for");
+    const realIp = req.headers.get("x-real-ip");
+    const clientIp = forwarded?.split(",")[0]?.trim() || realIp || "unknown";
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limit for this IP
+    const windowStart = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString();
+    
+    const { data: existingEntry } = await supabase
+      .from("ip_rate_limits")
+      .select("*")
+      .eq("ip_address", clientIp)
+      .eq("action_type", "moderation")
+      .gte("window_start", windowStart)
+      .single();
+
+    if (existingEntry && existingEntry.attempts >= MAX_MODERATION_ATTEMPTS) {
+      const resetTime = new Date(new Date(existingEntry.window_start).getTime() + WINDOW_MINUTES * 60 * 1000);
+      const waitMinutes = Math.ceil((resetTime.getTime() - Date.now()) / 60000);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: "Rate limit exceeded",
+          message: `Too many moderation requests. Please wait ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''}.`,
+          retry_after: waitMinutes * 60,
+          // Fail open - return safe to not block content
+          safe: true,
+          blocked: false,
+          issues: [],
+          confidence: 0,
+          flag_type: null,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Increment rate limit counter
+    if (existingEntry) {
+      await supabase
+        .from("ip_rate_limits")
+        .update({ attempts: existingEntry.attempts + 1 })
+        .eq("id", existingEntry.id);
+    } else {
+      await supabase
+        .from("ip_rate_limits")
+        .insert({
+          ip_address: clientIp,
+          action_type: "moderation",
+          attempts: 1,
+          window_start: new Date().toISOString(),
+        });
+    }
 
     // Parse request body
     let body: ModerationRequest;
