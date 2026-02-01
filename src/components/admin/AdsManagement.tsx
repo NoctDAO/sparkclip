@@ -105,12 +105,44 @@ export function AdsManagement() {
     setDialogOpen(true);
   };
 
+  const validateFile = (file: File, type: "video" | "image" | "logo"): string | null => {
+    const maxVideoSize = 50 * 1024 * 1024; // 50MB
+    const maxImageSize = 5 * 1024 * 1024; // 5MB
+    
+    const allowedVideoFormats = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
+    const allowedImageFormats = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+    if (type === "video") {
+      if (!allowedVideoFormats.includes(file.type)) {
+        return "Invalid video format. Please use MP4, WebM, MOV, or AVI.";
+      }
+      if (file.size > maxVideoSize) {
+        return `Video file is too large. Maximum size is 50MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`;
+      }
+    } else {
+      if (!allowedImageFormats.includes(file.type)) {
+        return "Invalid image format. Please use JPG, PNG, GIF, or WebP.";
+      }
+      if (file.size > maxImageSize) {
+        return `Image file is too large. Maximum size is 5MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`;
+      }
+    }
+    return null;
+  };
+
   const handleFileUpload = async (
     file: File,
     type: "video" | "image" | "logo",
     setUploading: (v: boolean) => void
   ) => {
     if (!file) return;
+
+    // Validate file before upload
+    const validationError = validateFile(file, type);
+    if (validationError) {
+      toast({ title: "Upload Error", description: validationError, variant: "destructive" });
+      return;
+    }
 
     setUploading(true);
 
