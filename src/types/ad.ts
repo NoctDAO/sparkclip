@@ -20,6 +20,15 @@ export interface Ad {
   target_hashtags: string[] | null;
   target_creators: string[] | null;
   target_interests: string[] | null;
+  // Budget fields
+  total_budget: number | null;
+  daily_budget: number | null;
+  total_spent: number | null;
+  daily_spent: number | null;
+  cost_per_impression: number | null;
+  cost_per_click: number | null;
+  paused_reason: string | null;
+  last_daily_reset: string | null;
 }
 
 export type InterestCategory = 
