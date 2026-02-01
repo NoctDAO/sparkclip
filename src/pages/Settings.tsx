@@ -15,6 +15,7 @@ import {
   Mail,
   Calendar,
   CheckCircle,
+  Megaphone,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +52,7 @@ interface Profile {
 export default function Settings() {
   const navigate = useNavigate();
   const { user, session, signOut } = useAuth();
-  const { isAdmin, isModerator, isVerified } = useUserRoles(user?.id);
+  const { isAdmin, isModerator, isVerified, isAdvertiser } = useUserRoles(user?.id);
   const { toast } = useToast();
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -251,6 +252,14 @@ export default function Settings() {
               label="Moderation"
               description="Review reported content"
               onClick={() => navigate("/moderation")}
+            />
+          )}
+          {isAdvertiser && (
+            <SettingsItem
+              icon={Megaphone}
+              label="Advertiser Dashboard"
+              description="Manage your ad campaigns"
+              onClick={() => navigate("/advertiser")}
             />
           )}
         </div>
