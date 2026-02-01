@@ -1,254 +1,148 @@
 
+# In-Feed Ads Monetization System
 
-# Plan: Scale to 1 Million Concurrent Users
-
-## Current Architecture Analysis
-
-After thoroughly reviewing the codebase, I've identified several areas that need attention to handle 1M concurrent users reliably.
-
-### What's Already Good
-- ✅ Database indexes exist on key query columns (likes_count, created_at, user_id)
-- ✅ Full-text search indexes (GIN) on videos, profiles, sounds
-- ✅ Client-side rate limiting on likes/comments/follows
-- ✅ Efficient batch profile fetching (grouping by user IDs)
-- ✅ RLS policies for security
-- ✅ Triggers for count updates (likes_count, followers_count, etc.)
-
-### Critical Bottlenecks Identified
-
-| Issue | Impact | Severity |
-|-------|--------|----------|
-| No caching layer | Every user hits database directly | 🔴 Critical |
-| Realtime on high-traffic tables | 1M subscriptions = massive overhead | 🔴 Critical |
-| N+1 query patterns | Multiple DB calls per page load | 🟠 High |
-| Video views table unbounded writes | Could grow to billions of rows | 🟠 High |
-| Recommendations edge function does many queries | Not cached, slow for each request | 🟠 High |
-| No connection pooling optimization | Database connections exhausted | 🟠 High |
+This plan implements a native ad system that displays sponsored content seamlessly within the video feed, looking and behaving like regular videos. The system supports both Google AdSense and custom self-served ads with an admin management interface.
 
 ---
 
-## Implementation Plan
+## Overview
 
-### Phase 1: Add Caching Layer
+Ads will appear as full-screen cards in the vertical scroll feed at configurable intervals (e.g., every 5 videos). Users can skip/swipe past ads just like regular videos. The system includes:
 
-**1.1 Create trending_cache table** (already exists but underutilized)
-
-The existing `trending_cache` table should be populated by a scheduled edge function instead of computed on-the-fly:
-
-```text
-New Edge Function: cache-trending-content
-- Runs every 5 minutes via cron
-- Pre-computes trending videos, hashtags, creators, sounds
-- Stores results with TTL
-- Frontend reads from cache instead of computing live
-```
-
-**1.2 Add response caching headers to edge functions**
-
-All edge functions should return appropriate `Cache-Control` headers:
-- Trending content: `max-age=300` (5 minutes)
-- Recommendations: `max-age=60` (1 minute, personalized)
-- Static content: `max-age=3600` (1 hour)
-
-**1.3 Client-side query caching with React Query**
-
-Configure stale-while-revalidate patterns:
-```text
-- Trending content: staleTime 5 minutes
-- User profile: staleTime 1 minute  
-- Video feed: staleTime 30 seconds
-- Notifications: real-time only
-```
-
-### Phase 2: Optimize Database Queries
-
-**2.1 Add composite indexes for common query patterns**
-
-```text
-New indexes needed:
-- videos(user_id, created_at DESC) - for user's video feed
-- videos(series_id, series_order) - for series navigation  
-- follows(follower_id, following_id) - for follow checks
-- likes(user_id, video_id) - for like status checks
-- notifications(user_id, is_read, created_at DESC) - for notification queries
-```
-
-**2.2 Optimize the video feed query**
-
-Current: 5+ separate queries (videos, profiles, sounds, series, interactions)
-Target: 1-2 queries with proper JOINs or batch operations
-
-```text
-Create database function: get_feed_videos(user_id, feed_type, limit, offset)
-- Returns videos with all joined data in one call
-- Handles blocked users filtering at DB level
-- Returns user's like/bookmark status in same query
-```
-
-**2.3 Partition video_views table**
-
-```text
-- Partition by month (video_views_2026_01, video_views_2026_02, etc.)
-- Add automatic partition creation trigger
-- Aggregate old partitions into daily summaries
-- Keep only 7 days of raw data, rest as aggregates
-```
-
-### Phase 3: Optimize Realtime Subscriptions
-
-**3.1 Limit realtime to essential tables only**
-
-Currently enabled on: messages, conversations, video_views, notifications
-
-Changes:
-```text
-- REMOVE: video_views (use polling instead)
-- KEEP: messages (essential for DMs)
-- KEEP: notifications (essential for alerts)
-- MODIFY: conversations (use last_message_at polling instead)
-```
-
-**3.2 Add realtime filters**
-
-Instead of subscribing to all notifications:
-```text
-Current: filter: user_id=eq.${user.id}
-Better: Use compound filters and debounce updates
-```
-
-### Phase 4: Edge Function Optimizations
-
-**4.1 Optimize get-recommendations function**
-
-Current issues:
-- 5-7 database queries per request
-- No caching
-- Sequential query execution
-
-Solution:
-```text
-1. Pre-compute user affinities in background job
-2. Store user_recommendations table with pre-computed results
-3. Refresh every 15 minutes per active user
-4. Edge function just reads from cache
-```
-
-**4.2 Add connection pooling awareness**
-
-Use single Supabase client per request, not multiple:
-```text
-- Reuse client across all queries in a request
-- Use Promise.all() for parallel queries
-- Implement request-level caching
-```
-
-### Phase 5: CDN & Asset Optimization
-
-**5.1 Video delivery optimization**
-
-```text
-- Supabase Storage already uses CDN
-- Add video transcoding for adaptive bitrate
-- Pre-generate multiple quality levels (360p, 720p, 1080p)
-- Implement HLS streaming for large videos
-```
-
-**5.2 Thumbnail optimization**
-
-Already implemented image transformations, but ensure:
-```text
-- Pre-generate common sizes on upload
-- Use WebP format with JPEG fallback
-- Set long cache TTLs (1 year for immutable content)
-```
-
-### Phase 6: Backend Scaling Configuration
-
-**6.1 Database configuration**
-
-Lovable Cloud handles most of this, but ensure:
-```text
-- Connection pool size appropriate for traffic
-- Statement timeout to prevent long-running queries
-- Vacuum/analyze schedules optimized
-```
-
-**6.2 Edge function concurrency**
-
-```text
-- Increase memory allocation for complex functions
-- Add timeout handling and graceful degradation
-- Implement circuit breaker pattern for external calls
-```
+- **In-Feed Ad Cards**: Native-looking sponsored content slots
+- **Admin Ad Management**: Create, schedule, and manage custom ad campaigns
+- **Google AdSense Integration**: Fallback to programmatic ads when no custom ads available
+- **Analytics Tracking**: Impressions, clicks, and view duration metrics
 
 ---
 
-## Files to Create/Modify
+## Implementation Details
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/cache-trending/index.ts` | **NEW** - Background job to populate trending cache |
-| `supabase/functions/get-recommendations/index.ts` | Add caching, optimize queries |
-| `src/hooks/useRecommendations.ts` | Use React Query with proper cache config |
-| `src/hooks/useNotifications.ts` | Reduce realtime overhead |
-| `src/components/video/VideoFeed.tsx` | Optimize query batching |
-| `src/hooks/useTrendingCache.ts` | **NEW** - Read from pre-computed cache |
-| SQL migrations | Add composite indexes, partitioning, helper functions |
+### 1. Database Schema
 
----
+**New table: `ads`**
+Stores custom advertisement campaigns with targeting and scheduling:
+- `id`, `title`, `description`, `video_url` or `image_url`
+- `click_url` (destination when tapped)
+- `advertiser_name`, `advertiser_logo_url`
+- `status` (active, paused, scheduled, ended)
+- `start_date`, `end_date`
+- `priority` (for ordering multiple active ads)
+- `impressions_count`, `clicks_count`
+- `created_at`, `updated_at`
 
-## Database Migrations Needed
+**New table: `ad_settings`**
+Global configuration for the ad system:
+- `ad_frequency` (show ad every N videos, default: 5)
+- `adsense_enabled` (boolean)
+- `adsense_client_id` (ca-pub-xxx)
+- `adsense_slot_id`
+- `custom_ads_enabled` (boolean)
+
+**New table: `ad_analytics`**
+Detailed tracking for each ad interaction:
+- `ad_id`, `user_id` (nullable for anonymous)
+- `event_type` (impression, click, skip, view_complete)
+- `view_duration_ms`
+- `created_at`
+
+### 2. Ad Card Component
+
+**New file: `src/components/video/AdCard.tsx`**
+
+A full-screen ad card matching the VideoCard design:
+- "Sponsored" badge in corner
+- Advertiser name/logo display
+- Video or image content player
+- Call-to-action button overlay
+- Click tracking with analytics
+- Swipe gestures work identically to videos
 
 ```text
-1. Add composite indexes for optimized queries
-2. Create get_feed_videos() stored procedure  
-3. Create refresh_trending_cache() function
-4. Partition video_views table
-5. Add user_recommendations cache table
-6. Remove realtime from video_views table
++---------------------------+
+|   [Sponsored]             |
+|                           |
+|      AD VIDEO/IMAGE       |
+|      (full screen)        |
+|                           |
+|   Advertiser Logo         |
+|   Ad Title/Description    |
+|   [Learn More CTA]        |
++---------------------------+
 ```
 
+### 3. AdSense Integration Component
+
+**New file: `src/components/ads/AdSenseUnit.tsx`**
+
+For programmatic ads when custom ads are unavailable:
+- Loads the AdSense script dynamically
+- Renders responsive in-feed ad unit
+- Handles ad-blocker detection gracefully
+- Falls back to empty state if blocked
+
+### 4. Video Feed Modification
+
+**Modified file: `src/components/video/VideoFeed.tsx`**
+
+Inject ads at configured intervals:
+- Fetch active ads from database
+- Insert ad cards at positions based on `ad_frequency`
+- Track which ads have been shown to avoid repeats
+- Handle mixed content (videos + ads) in snap scroll
+
+### 5. Admin Dashboard - Ads Tab
+
+**New file: `src/components/admin/AdsManagement.tsx`**
+
+Admin interface for managing advertisements:
+- Create/edit custom ad campaigns
+- Upload video or image creative
+- Set scheduling and priority
+- View performance metrics (impressions, clicks, CTR)
+- Toggle AdSense integration on/off
+- Configure ad frequency
+
+**Modified file: `src/pages/AdminDashboard.tsx`**
+- Add "Ads" tab to existing admin navigation
+
+### 6. Analytics Hook
+
+**New file: `src/hooks/useAdAnalytics.ts`**
+
+Track ad performance:
+- Log impressions when ad enters viewport
+- Track click events
+- Measure view duration
+- Send data to `ad_analytics` table
+
+### 7. Security Considerations
+
+- RLS policies on ads table: public read for active ads, admin-only write
+- Rate limiting on click tracking to prevent fraud
+- Validate click URLs are HTTPS
+- Sanitize ad content for XSS prevention
+
 ---
 
-## Implementation Priority
+## File Changes Summary
 
-1. **Immediate** (Critical for scale):
-   - Add trending cache population
-   - Optimize video feed queries
-   - Add missing composite indexes
-
-2. **Short-term** (Within 1 week):
-   - Implement React Query caching
-   - Optimize recommendations edge function
-   - Reduce realtime subscriptions
-
-3. **Medium-term** (Within 1 month):
-   - Partition video_views
-   - Add video transcoding pipeline
-   - Implement user recommendation pre-computation
+| Action | File |
+|--------|------|
+| Create | `src/components/video/AdCard.tsx` |
+| Create | `src/components/ads/AdSenseUnit.tsx` |
+| Create | `src/components/admin/AdsManagement.tsx` |
+| Create | `src/hooks/useAdAnalytics.ts` |
+| Create | `src/types/ad.ts` |
+| Modify | `src/components/video/VideoFeed.tsx` |
+| Modify | `src/pages/AdminDashboard.tsx` |
+| Create | Database migration for ads tables |
 
 ---
 
-## Expected Performance Improvements
+## User Experience
 
-| Metric | Current | After Optimization |
-|--------|---------|-------------------|
-| DB queries per feed load | 5-7 | 1-2 |
-| Trending page load | 200-500ms | 50-100ms (cached) |
-| Recommendations latency | 300-800ms | 50-150ms (cached) |
-| Realtime connections | 1M+ | ~200K (messages/notifications only) |
-| Database connections | Exhausted at ~100K | Sustainable at 1M+ |
-
----
-
-## Monitoring Recommendations
-
-To ensure the optimizations work at scale:
-```text
-- Monitor query execution times
-- Track cache hit rates
-- Alert on slow queries (>500ms)
-- Monitor connection pool utilization
-- Track edge function cold starts
-```
-
+1. **Viewers**: See sponsored content every 5 videos (configurable), clearly labeled as "Sponsored"
+2. **Admins**: Full control over ad campaigns, scheduling, and monetization settings
+3. **Advertisers**: Can provide video/image creatives with click-through URLs
+4. **Fallback**: Google AdSense fills empty slots when no custom ads are available
