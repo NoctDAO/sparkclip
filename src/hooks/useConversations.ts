@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Conversation, Message } from "@/types/message";
+import { isValidUUID } from "@/lib/sanitize";
 
 export function useConversations() {
   const { user } = useAuth();
@@ -148,7 +149,14 @@ export function useConversations() {
     async (otherUserId: string): Promise<string | null> => {
       if (!user) return null;
 
+      // Validate UUID to prevent injection
+      if (!isValidUUID(otherUserId)) {
+        console.error("Invalid user ID format");
+        return null;
+      }
+
       // Check if conversation already exists
+      // Use .eq() filters instead of string interpolation in .or() for safety
       const { data: existing } = await supabase
         .from("conversations")
         .select("id")

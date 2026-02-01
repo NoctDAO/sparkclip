@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Video, Profile, Sound, VideoSeries } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
 import { useBlockedUsers } from "@/hooks/useBlockedUsers";
-
+import { sanitizeSearchQuery } from "@/lib/sanitize";
 export interface HashtagResult {
   tag: string;
   videoCount: number;
@@ -99,13 +99,16 @@ export function useSearch(query: string, debounceMs = 300) {
   const performSearch = async (searchQuery: string) => {
     setIsLoading(true);
 
+    // Sanitize the search query to prevent injection attacks
+    const sanitizedQuery = sanitizeSearchQuery(searchQuery);
+
     try {
       const [videosRes, usersRes, soundsRes, seriesRes] = await Promise.all([
         // Search videos by caption and hashtags
         supabase
           .from("videos")
           .select("*")
-          .or(`caption.ilike.%${searchQuery}%`)
+          .ilike("caption", `%${sanitizedQuery}%`)
           .order("likes_count", { ascending: false })
           .limit(20),
         
@@ -113,7 +116,7 @@ export function useSearch(query: string, debounceMs = 300) {
         supabase
           .from("profiles")
           .select("*")
-          .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+          .or(`username.ilike.%${sanitizedQuery}%,display_name.ilike.%${sanitizedQuery}%`)
           .order("followers_count", { ascending: false })
           .limit(20),
         
@@ -121,7 +124,7 @@ export function useSearch(query: string, debounceMs = 300) {
         supabase
           .from("sounds")
           .select("*")
-          .or(`title.ilike.%${searchQuery}%,artist.ilike.%${searchQuery}%`)
+          .or(`title.ilike.%${sanitizedQuery}%,artist.ilike.%${sanitizedQuery}%`)
           .order("uses_count", { ascending: false })
           .limit(20),
 
@@ -129,7 +132,7 @@ export function useSearch(query: string, debounceMs = 300) {
         supabase
           .from("video_series")
           .select("*")
-          .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+          .or(`title.ilike.%${sanitizedQuery}%,description.ilike.%${sanitizedQuery}%`)
           .order("total_views", { ascending: false })
           .limit(20),
       ]);
