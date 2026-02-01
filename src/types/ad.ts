@@ -16,7 +16,36 @@ export interface Ad {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  // Targeting options
+  target_hashtags: string[] | null;
+  target_creators: string[] | null;
+  target_interests: string[] | null;
 }
+
+export type InterestCategory = 
+  | 'entertainment'
+  | 'music'
+  | 'sports'
+  | 'gaming'
+  | 'fashion'
+  | 'food'
+  | 'travel'
+  | 'tech'
+  | 'education'
+  | 'lifestyle';
+
+export const INTEREST_CATEGORIES: { value: InterestCategory; label: string }[] = [
+  { value: 'entertainment', label: 'Entertainment' },
+  { value: 'music', label: 'Music' },
+  { value: 'sports', label: 'Sports' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'fashion', label: 'Fashion & Beauty' },
+  { value: 'food', label: 'Food & Cooking' },
+  { value: 'travel', label: 'Travel' },
+  { value: 'tech', label: 'Technology' },
+  { value: 'education', label: 'Education' },
+  { value: 'lifestyle', label: 'Lifestyle' },
+];
 
 export interface AdSettings {
   id: string;
