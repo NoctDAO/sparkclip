@@ -27,6 +27,7 @@ import { AdPreview } from "@/components/advertiser/AdPreview";
 import { LocationTargeting } from "@/components/advertiser/LocationTargeting";
 import { DeviceTargeting } from "@/components/advertiser/DeviceTargeting";
 import { AgeRangeTargeting } from "@/components/advertiser/AgeRangeTargeting";
+import { BudgetAlertsBell } from "@/components/advertiser/BudgetAlertsBell";
 
 type AdStatus = "draft" | "active" | "paused" | "scheduled" | "ended";
 
@@ -419,6 +420,7 @@ export default function AdvertiserDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {user && <BudgetAlertsBell userId={user.id} />}
             <Button variant="outline" onClick={() => navigate("/advertiser/analytics")}>
               <LineChart className="w-4 h-4 mr-2" />
               Analytics

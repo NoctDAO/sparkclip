@@ -16,6 +16,7 @@ import {
   Calendar,
   CheckCircle,
   Megaphone,
+  DollarSign,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -237,6 +238,12 @@ export default function Settings() {
             label="Analytics"
             description="View your video performance"
             onClick={() => navigate("/analytics")}
+          />
+          <SettingsItem
+            icon={DollarSign}
+            label="Creator Earnings"
+            description="View your ad revenue earnings"
+            onClick={() => navigate("/earnings")}
           />
           {isAdmin && (
             <SettingsItem
