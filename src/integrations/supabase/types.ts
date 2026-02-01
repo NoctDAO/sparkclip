@@ -82,6 +82,38 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_spend_logs: {
+        Row: {
+          ad_id: string
+          cost: number
+          created_at: string | null
+          event_type: string
+          id: string
+        }
+        Insert: {
+          ad_id: string
+          cost: number
+          created_at?: string | null
+          event_type: string
+          id?: string
+        }
+        Update: {
+          ad_id?: string
+          cost?: number
+          created_at?: string | null
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_spend_logs_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_logs: {
         Row: {
           action_type: string
@@ -118,13 +150,19 @@ export type Database = {
           advertiser_name: string
           click_url: string
           clicks_count: number
+          cost_per_click: number | null
+          cost_per_impression: number | null
           created_at: string
           created_by: string | null
+          daily_budget: number | null
+          daily_spent: number | null
           description: string | null
           end_date: string | null
           id: string
           image_url: string | null
           impressions_count: number
+          last_daily_reset: string | null
+          paused_reason: string | null
           priority: number
           start_date: string | null
           status: string
@@ -132,6 +170,8 @@ export type Database = {
           target_hashtags: string[] | null
           target_interests: string[] | null
           title: string
+          total_budget: number | null
+          total_spent: number | null
           updated_at: string
           video_url: string | null
         }
@@ -140,13 +180,19 @@ export type Database = {
           advertiser_name: string
           click_url: string
           clicks_count?: number
+          cost_per_click?: number | null
+          cost_per_impression?: number | null
           created_at?: string
           created_by?: string | null
+          daily_budget?: number | null
+          daily_spent?: number | null
           description?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null
           impressions_count?: number
+          last_daily_reset?: string | null
+          paused_reason?: string | null
           priority?: number
           start_date?: string | null
           status?: string
@@ -154,6 +200,8 @@ export type Database = {
           target_hashtags?: string[] | null
           target_interests?: string[] | null
           title: string
+          total_budget?: number | null
+          total_spent?: number | null
           updated_at?: string
           video_url?: string | null
         }
@@ -162,13 +210,19 @@ export type Database = {
           advertiser_name?: string
           click_url?: string
           clicks_count?: number
+          cost_per_click?: number | null
+          cost_per_impression?: number | null
           created_at?: string
           created_by?: string | null
+          daily_budget?: number | null
+          daily_spent?: number | null
           description?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null
           impressions_count?: number
+          last_daily_reset?: string | null
+          paused_reason?: string | null
           priority?: number
           start_date?: string | null
           status?: string
@@ -176,6 +230,8 @@ export type Database = {
           target_hashtags?: string[] | null
           target_interests?: string[] | null
           title?: string
+          total_budget?: number | null
+          total_spent?: number | null
           updated_at?: string
           video_url?: string | null
         }
@@ -1240,6 +1296,19 @@ export type Database = {
         Returns: boolean
       }
       cleanup_ip_rate_limits: { Args: never; Returns: undefined }
+      get_ad_budget_status: {
+        Args: { p_ad_id: string }
+        Returns: {
+          daily_budget: number
+          daily_percent_used: number
+          daily_remaining: number
+          daily_spent: number
+          total_budget: number
+          total_percent_used: number
+          total_remaining: number
+          total_spent: number
+        }[]
+      }
       get_feed_videos: {
         Args: {
           p_blocked_user_ids?: string[]
@@ -1326,7 +1395,12 @@ export type Database = {
         Returns: undefined
       }
       increment_view_count: { Args: { video_id: string }; Returns: undefined }
+      record_ad_spend: {
+        Args: { p_ad_id: string; p_event_type: string }
+        Returns: boolean
+      }
       refresh_trending_cache: { Args: never; Returns: undefined }
+      reset_daily_ad_spend: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "verified" | "advertiser"
