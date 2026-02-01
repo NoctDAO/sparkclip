@@ -170,9 +170,12 @@ export type Database = {
           priority: number
           start_date: string | null
           status: string
+          target_age_range: Json | null
           target_creators: string[] | null
+          target_device_types: string[] | null
           target_hashtags: string[] | null
           target_interests: string[] | null
+          target_locations: string[] | null
           title: string
           total_budget: number | null
           total_spent: number | null
@@ -204,9 +207,12 @@ export type Database = {
           priority?: number
           start_date?: string | null
           status?: string
+          target_age_range?: Json | null
           target_creators?: string[] | null
+          target_device_types?: string[] | null
           target_hashtags?: string[] | null
           target_interests?: string[] | null
+          target_locations?: string[] | null
           title: string
           total_budget?: number | null
           total_spent?: number | null
@@ -238,9 +244,12 @@ export type Database = {
           priority?: number
           start_date?: string | null
           status?: string
+          target_age_range?: Json | null
           target_creators?: string[] | null
+          target_device_types?: string[] | null
           target_hashtags?: string[] | null
           target_interests?: string[] | null
+          target_locations?: string[] | null
           title?: string
           total_budget?: number | null
           total_spent?: number | null
@@ -1076,6 +1085,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_interests: {
+        Row: {
+          created_at: string
+          education_weight: number | null
+          entertainment_weight: number | null
+          fashion_weight: number | null
+          food_weight: number | null
+          gaming_weight: number | null
+          id: string
+          lifestyle_weight: number | null
+          music_weight: number | null
+          sports_weight: number | null
+          tech_weight: number | null
+          travel_weight: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          education_weight?: number | null
+          entertainment_weight?: number | null
+          fashion_weight?: number | null
+          food_weight?: number | null
+          gaming_weight?: number | null
+          id?: string
+          lifestyle_weight?: number | null
+          music_weight?: number | null
+          sports_weight?: number | null
+          tech_weight?: number | null
+          travel_weight?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          education_weight?: number | null
+          entertainment_weight?: number | null
+          fashion_weight?: number | null
+          food_weight?: number | null
+          gaming_weight?: number | null
+          id?: string
+          lifestyle_weight?: number | null
+          music_weight?: number | null
+          sports_weight?: number | null
+          tech_weight?: number | null
+          travel_weight?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_privacy_settings: {
         Row: {

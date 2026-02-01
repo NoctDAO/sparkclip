@@ -1,3 +1,5 @@
+import { Json } from "@/integrations/supabase/types";
+
 export interface Ad {
   id: string;
   title: string;
@@ -20,6 +22,9 @@ export interface Ad {
   target_hashtags: string[] | null;
   target_creators: string[] | null;
   target_interests: string[] | null;
+  target_locations: string[] | null;
+  target_age_range: Json | null;  // JSONB from DB - can be { min: number; max: number }
+  target_device_types: string[] | null;
   // Budget fields
   total_budget: number | null;
   daily_budget: number | null;
