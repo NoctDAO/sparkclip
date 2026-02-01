@@ -7,6 +7,14 @@ import {
   sanitizeString,
   validationErrorResponse,
 } from "../_shared/validation.ts";
+import {
+  createSecurityLog,
+  logSecurityEvent,
+  getClientIp,
+  createTimer,
+} from "../_shared/logger.ts";
+
+const FUNCTION_NAME = "moderate-content";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,11 +48,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const timer = createTimer();
+  const clientIp = getClientIp(req);
+
   try {
-    // Get client IP for rate limiting
-    const forwarded = req.headers.get("x-forwarded-for");
-    const realIp = req.headers.get("x-real-ip");
-    const clientIp = forwarded?.split(",")[0]?.trim() || realIp || "unknown";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -67,6 +74,13 @@ serve(async (req) => {
       const resetTime = new Date(new Date(existingEntry.window_start).getTime() + WINDOW_MINUTES * 60 * 1000);
       const waitMinutes = Math.ceil((resetTime.getTime() - Date.now()) / 60000);
       
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "rate_limit_exceeded", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+        metadata: { attempts: existingEntry.attempts },
+      }));
+
       return new Response(
         JSON.stringify({ 
           error: "Rate limit exceeded",
@@ -168,6 +182,18 @@ serve(async (req) => {
         status: "pending",
       }] as any);
 
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "content_blocked", clientIp, {
+        level: "warn",
+        success: true,
+        durationMs: timer(),
+        metadata: { 
+          content_type, 
+          content_id, 
+          flag_type: keywordMatch.category,
+          method: "keyword_match",
+        },
+      }));
+
       return new Response(
         JSON.stringify({
           safe: false,
@@ -257,6 +283,19 @@ Be conservative - only flag content that clearly violates policies.`
         detected_issues: { ai_issues: aiResult.issues },
         status: "pending",
       }] as any);
+
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "content_flagged", clientIp, {
+        level: "info",
+        success: true,
+        durationMs: timer(),
+        metadata: { 
+          content_type, 
+          content_id, 
+          flag_type: aiResult.flag_type,
+          confidence: aiResult.confidence,
+          method: "ai_moderation",
+        },
+      }));
     }
 
     // Also flag if keyword matched with flag action (not block)
@@ -278,6 +317,19 @@ Be conservative - only flag content that clearly violates policies.`
       };
     }
 
+    // Log successful moderation
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, "moderation_complete", clientIp, {
+      level: "info",
+      success: true,
+      durationMs: timer(),
+      metadata: { 
+        content_type, 
+        content_id, 
+        safe: aiResult.safe,
+        used_ai: !!lovableApiKey,
+      },
+    }));
+
     return new Response(
       JSON.stringify({
         ...aiResult,
@@ -287,7 +339,13 @@ Be conservative - only flag content that clearly violates policies.`
     );
 
   } catch (error) {
-    console.error("Moderation error:", error);
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, "internal_error", clientIp, {
+      level: "error",
+      success: false,
+      durationMs: timer(),
+      error: error instanceof Error ? error.message : "Unknown error",
+    }));
+
     return new Response(
       JSON.stringify({ error: "Internal server error", safe: true }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

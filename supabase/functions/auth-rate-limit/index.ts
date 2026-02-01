@@ -7,6 +7,14 @@ import {
   sanitizeString,
   validationErrorResponse,
 } from "../_shared/validation.ts";
+import {
+  createSecurityLog,
+  logSecurityEvent,
+  getClientIp,
+  createTimer,
+} from "../_shared/logger.ts";
+
+const FUNCTION_NAME = "auth-rate-limit";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,11 +43,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const timer = createTimer();
+  const clientIp = getClientIp(req);
+
   try {
-    // Get client IP from headers (works with Supabase edge functions)
-    const forwarded = req.headers.get("x-forwarded-for");
-    const realIp = req.headers.get("x-real-ip");
-    const clientIp = forwarded?.split(",")[0]?.trim() || realIp || "unknown";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -58,16 +65,34 @@ serve(async (req) => {
 
     // Validate action
     if (!isValidAuthAction(action)) {
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "validation_failed", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+        metadata: { reason: "invalid_action" },
+      }));
       return validationErrorResponse(["Invalid action. Must be 'signin' or 'signup'"], corsHeaders);
     }
 
     // Validate email
     if (!isValidEmail(email)) {
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "validation_failed", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+        metadata: { reason: "invalid_email" },
+      }));
       return validationErrorResponse(["Invalid email format"], corsHeaders);
     }
 
     // Validate password
     if (!isValidPassword(password)) {
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "validation_failed", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+        metadata: { reason: "invalid_password_length" },
+      }));
       return validationErrorResponse(["Password must be between 8 and 128 characters"], corsHeaders);
     }
 
@@ -90,6 +115,13 @@ serve(async (req) => {
       const resetTime = new Date(new Date(existingEntry.window_start).getTime() + WINDOW_MINUTES * 60 * 1000);
       const waitMinutes = Math.ceil((resetTime.getTime() - Date.now()) / 60000);
       
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "rate_limit_exceeded", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+        metadata: { action, attempts: existingEntry.attempts },
+      }));
+
       return new Response(
         JSON.stringify({ 
           error: "Too many login attempts",
@@ -137,6 +169,13 @@ serve(async (req) => {
     }
 
     if (result.error) {
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, `${action}_failed`, clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+        metadata: { error_code: result.error.name },
+      }));
+
       return new Response(
         JSON.stringify({ error: result.error.message }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -152,6 +191,13 @@ serve(async (req) => {
         .eq("action_type", "auth");
     }
 
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, `${action}_success`, clientIp, {
+      level: "info",
+      success: true,
+      userId: result.data.user?.id,
+      durationMs: timer(),
+    }));
+
     return new Response(
       JSON.stringify({ 
         user: result.data.user,
@@ -161,7 +207,13 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Auth rate limit error:", error);
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, "internal_error", clientIp, {
+      level: "error",
+      success: false,
+      durationMs: timer(),
+      error: error instanceof Error ? error.message : "Unknown error",
+    }));
+
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
