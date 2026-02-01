@@ -24,6 +24,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Ad, INTEREST_CATEGORIES } from "@/types/ad";
 import { BudgetStatusCard } from "@/components/advertiser/BudgetStatusCard";
 import { AdPreview } from "@/components/advertiser/AdPreview";
+import { LocationTargeting } from "@/components/advertiser/LocationTargeting";
+import { DeviceTargeting } from "@/components/advertiser/DeviceTargeting";
+import { AgeRangeTargeting } from "@/components/advertiser/AgeRangeTargeting";
 
 type AdStatus = "draft" | "active" | "paused" | "scheduled" | "ended";
 
@@ -42,6 +45,9 @@ interface AdFormData {
   target_hashtags: string;
   target_creators: string;
   target_interests: string[];
+  target_locations: string[];
+  target_device_types: string[];
+  target_age_range: { min: number; max: number } | null;
   total_budget: string;
   daily_budget: string;
   cost_per_impression: string;
@@ -63,6 +69,9 @@ const defaultFormData: AdFormData = {
   target_hashtags: "",
   target_creators: "",
   target_interests: [],
+  target_locations: [],
+  target_device_types: [],
+  target_age_range: null,
   total_budget: "",
   daily_budget: "",
   cost_per_impression: "0.001",
@@ -192,6 +201,9 @@ export default function AdvertiserDashboard() {
         target_hashtags: ad.target_hashtags?.join(", ") || "",
         target_creators: ad.target_creators?.join(", ") || "",
         target_interests: ad.target_interests || [],
+        target_locations: ad.target_locations || [],
+        target_device_types: ad.target_device_types || [],
+        target_age_range: ad.target_age_range as { min: number; max: number } | null,
         total_budget: ad.total_budget?.toString() || "",
         daily_budget: ad.daily_budget?.toString() || "",
         cost_per_impression: ad.cost_per_impression?.toString() || "0.001",
@@ -314,6 +326,9 @@ export default function AdvertiserDashboard() {
       target_hashtags: targetHashtags.length > 0 ? targetHashtags : null,
       target_creators: targetCreators.length > 0 ? targetCreators : null,
       target_interests: formData.target_interests.length > 0 ? formData.target_interests : null,
+      target_locations: formData.target_locations.length > 0 ? formData.target_locations : null,
+      target_device_types: formData.target_device_types.length > 0 ? formData.target_device_types : null,
+      target_age_range: formData.target_age_range,
       total_budget: formData.total_budget ? parseFloat(formData.total_budget) : null,
       daily_budget: formData.daily_budget ? parseFloat(formData.daily_budget) : null,
       cost_per_impression: formData.cost_per_impression ? parseFloat(formData.cost_per_impression) : 0.001,
@@ -752,6 +767,34 @@ export default function AdvertiserDashboard() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Location Targeting */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      Location Targeting
+                    </Label>
+                    <LocationTargeting
+                      selectedLocations={formData.target_locations}
+                      onLocationsChange={(locations) => setFormData({ ...formData, target_locations: locations })}
+                    />
+                  </div>
+
+                  {/* Device Targeting */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      Device Targeting
+                    </Label>
+                    <DeviceTargeting
+                      selectedDevices={formData.target_device_types}
+                      onDevicesChange={(devices) => setFormData({ ...formData, target_device_types: devices })}
+                    />
+                  </div>
+
+                  {/* Age Range Targeting */}
+                  <AgeRangeTargeting
+                    ageRange={formData.target_age_range}
+                    onAgeRangeChange={(range) => setFormData({ ...formData, target_age_range: range })}
+                  />
                 </div>
 
                 {/* Budget Section */}
