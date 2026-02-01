@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Shield, Users, Flag, FileVideo, Ban, ListChecks, AlertTriangle, History, Zap, BookX } from "lucide-react";
+import { ArrowLeft, Shield, Users, Flag, FileVideo, Ban, ListChecks, AlertTriangle, History, Zap, BookX, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import { AppealsManagement } from "@/components/admin/AppealsManagement";
 import { AdminLogs } from "@/components/admin/AdminLogs";
 import { FlaggedContent } from "@/components/admin/FlaggedContent";
 import { KeywordManagement } from "@/components/admin/KeywordManagement";
+import { SecurityAuditLogs } from "@/components/admin/SecurityAuditLogs";
 
 interface DashboardStats {
   totalUsers: number;
@@ -187,7 +188,7 @@ export default function AdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="queue" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 md:grid-cols-7 h-auto">
+          <TabsList className="w-full grid grid-cols-4 md:grid-cols-8 h-auto">
             <TabsTrigger value="queue" className="gap-1 text-xs md:text-sm px-2">
               <ListChecks className="w-4 h-4" />
               <span className="hidden sm:inline">Queue</span>
@@ -227,6 +228,10 @@ export default function AdminDashboard() {
               <FileVideo className="w-4 h-4" />
               <span className="hidden sm:inline">Content</span>
             </TabsTrigger>
+            <TabsTrigger value="security" className="gap-1 text-xs md:text-sm px-2">
+              <Lock className="w-4 h-4" />
+              <span className="hidden sm:inline">Security</span>
+            </TabsTrigger>
             <TabsTrigger value="logs" className="gap-1 text-xs md:text-sm px-2">
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">Logs</span>
@@ -255,6 +260,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="content" className="mt-4">
             <ContentModeration />
+          </TabsContent>
+
+          <TabsContent value="security" className="mt-4">
+            <SecurityAuditLogs />
           </TabsContent>
 
           <TabsContent value="logs" className="mt-4">
