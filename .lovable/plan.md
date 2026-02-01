@@ -1,127 +1,240 @@
 
-# In-Feed Ads Monetization System
+# Complete Ads Monetization Enhancement Plan
 
-This plan implements a native ad system that displays sponsored content seamlessly within the video feed, looking and behaving like regular videos. The system supports both Google AdSense and custom self-served ads with an admin management interface.
-
----
-
-## Overview
-
-Ads will appear as full-screen cards in the vertical scroll feed at configurable intervals (e.g., every 5 videos). Users can skip/swipe past ads just like regular videos. The system includes:
-
-- **In-Feed Ad Cards**: Native-looking sponsored content slots
-- **Admin Ad Management**: Create, schedule, and manage custom ad campaigns
-- **Google AdSense Integration**: Fallback to programmatic ads when no custom ads available
-- **Analytics Tracking**: Impressions, clicks, and view duration metrics
+This plan implements five major features to enhance the advertising system: advanced targeting options, budget alert notifications, detailed performance reports, and a live ad preview feature.
 
 ---
 
-## Implementation Details
+## Feature 1: Enhanced Ad Targeting Options
 
-### 1. Database Schema
+Allow advertisers to target users by interests, location, and content categories for more effective ad delivery.
 
-**New table: `ads`**
-Stores custom advertisement campaigns with targeting and scheduling:
-- `id`, `title`, `description`, `video_url` or `image_url`
-- `click_url` (destination when tapped)
-- `advertiser_name`, `advertiser_logo_url`
-- `status` (active, paused, scheduled, ended)
-- `start_date`, `end_date`
-- `priority` (for ordering multiple active ads)
-- `impressions_count`, `clicks_count`
-- `created_at`, `updated_at`
+### Database Changes
 
-**New table: `ad_settings`**
-Global configuration for the ad system:
-- `ad_frequency` (show ad every N videos, default: 5)
-- `adsense_enabled` (boolean)
-- `adsense_client_id` (ca-pub-xxx)
-- `adsense_slot_id`
-- `custom_ads_enabled` (boolean)
+**Modify `ads` table** - add new targeting fields:
+- `target_locations` (text array) - geographic targeting by country/region codes
+- `target_age_range` (jsonb) - min/max age range
+- `target_device_types` (text array) - mobile, desktop, tablet
 
-**New table: `ad_analytics`**
-Detailed tracking for each ad interaction:
-- `ad_id`, `user_id` (nullable for anonymous)
-- `event_type` (impression, click, skip, view_complete)
-- `view_duration_ms`
-- `created_at`
+**Create `user_interests` table** - track user content preferences:
+- `id`, `user_id`, `interest_category`, `weight` (engagement score), `updated_at`
 
-### 2. Ad Card Component
+**Create database function** `calculate_user_interests`:
+- Analyzes user's liked videos, followed creators, and watch history
+- Assigns weighted scores to each interest category
+- Called periodically or on-demand
 
-**New file: `src/components/video/AdCard.tsx`**
+### Frontend Changes
 
-A full-screen ad card matching the VideoCard design:
-- "Sponsored" badge in corner
-- Advertiser name/logo display
-- Video or image content player
-- Call-to-action button overlay
-- Click tracking with analytics
-- Swipe gestures work identically to videos
+**Modify `src/pages/AdvertiserDashboard.tsx`**:
+- Add "Location Targeting" section with multi-select for countries/regions
+- Add "Device Targeting" toggle group (Mobile, Desktop, Tablet)
+- Add "Age Range" slider with min/max inputs
+- Enhance existing interest targeting UI with better category organization
+
+**Modify `src/components/video/VideoFeed.tsx`**:
+- Update ad selection logic to consider user's interests
+- Filter ads based on user's location (from browser/IP)
+- Consider device type when selecting ads
+
+### New Components
+
+**Create `src/components/advertiser/LocationTargeting.tsx`**:
+- Searchable dropdown for countries/regions
+- Selected locations displayed as removable chips
+
+**Create `src/components/advertiser/DeviceTargeting.tsx`**:
+- Toggle group for device type selection
+- Visual icons for each device type
+
+---
+
+## Feature 2: Budget Alert Email Notifications
+
+Automatically notify advertisers when campaign budgets are running low or exhausted.
+
+### Database Changes
+
+**Create `notification_preferences` table**:
+- `id`, `user_id`, `notification_type`, `email_enabled`, `in_app_enabled`, `threshold_percent`
+- Stores per-user notification preferences
+
+**Create `email_queue` table**:
+- `id`, `recipient_email`, `recipient_id`, `template_type`, `template_data` (jsonb)
+- `status` (pending, sent, failed), `created_at`, `sent_at`
+
+**Create database trigger** `check_budget_alerts`:
+- Fires on `ads` table update when `daily_spent` or `total_spent` changes
+- Checks if spending crosses 80%, 95%, or 100% thresholds
+- Inserts notification records for processing
+
+### Backend Function
+
+**Create `supabase/functions/send-budget-alerts/index.ts`**:
+- Polls `email_queue` for pending budget alerts
+- Uses Resend API (or similar) to send templated emails
+- Email templates for:
+  - "Budget 80% Spent" warning
+  - "Budget 95% Spent" critical warning
+  - "Campaign Paused" (budget exhausted)
+- Updates queue status after sending
+
+**Create `supabase/functions/check-budget-thresholds/index.ts`**:
+- Scheduled function (runs hourly)
+- Checks all active ads against budget thresholds
+- Creates notifications when thresholds crossed
+- Supports multiple alert levels (80%, 95%, 100%)
+
+### Frontend Changes
+
+**Create `src/components/advertiser/NotificationSettings.tsx`**:
+- Email notification toggle for budget alerts
+- Threshold customization (default 80%)
+- Test email button
+
+**Modify `src/pages/AdvertiserDashboard.tsx`**:
+- Add "Notifications" section in settings
+- Show alert badge on campaigns near budget limit
+
+---
+
+## Feature 3: Detailed Ad Performance Reports
+
+Create comprehensive analytics dashboard with charts showing impressions, clicks, CTR, and spend over time.
+
+### Database Changes
+
+**Create materialized view or function** `get_ad_performance_daily`:
+- Aggregates `ad_analytics` by day
+- Returns: date, impressions, clicks, skips, completes, avg_view_duration, spend
+- Supports date range filtering
+
+**Create function** `get_ad_performance_comparison`:
+- Compares current period to previous period
+- Calculates growth percentages
+
+### Frontend Changes
+
+**Create `src/pages/AdAnalytics.tsx`** - dedicated analytics page:
+- Time range selector (7d, 30d, 90d, custom)
+- Campaign filter dropdown
+- Key metrics cards with trend indicators
+
+**Create `src/components/advertiser/PerformanceCharts.tsx`**:
+- Line chart: Impressions & Clicks over time (dual axis)
+- Area chart: Spend over time with budget overlay
+- Bar chart: CTR by day of week
+- Pie chart: Event breakdown (impressions, clicks, skips, completes)
+
+**Create `src/components/advertiser/MetricsComparison.tsx`**:
+- Side-by-side comparison cards
+- Shows current vs previous period
+- Green/red trend arrows
+
+**Create `src/components/advertiser/PerformanceTable.tsx`**:
+- Sortable table with daily breakdown
+- Columns: Date, Impressions, Clicks, CTR, Spend, Avg View Time
+- Export to CSV functionality
+
+### Visual Design
 
 ```text
-+---------------------------+
-|   [Sponsored]             |
-|                           |
-|      AD VIDEO/IMAGE       |
-|      (full screen)        |
-|                           |
-|   Advertiser Logo         |
-|   Ad Title/Description    |
-|   [Learn More CTA]        |
-+---------------------------+
++-----------------------------------------------+
+|  Ad Performance Analytics                     |
+|  [Campaign ▼] [Last 30 days ▼] [Export CSV]   |
++-----------------------------------------------+
+|                                               |
+|  +--------+ +--------+ +--------+ +--------+  |
+|  | Impr.  | | Clicks | |  CTR   | | Spend  |  |
+|  | 12.5K  | |  890   | | 7.12%  | | $125   |  |
+|  | +15%   | | +8%    | | -2%    | | +12%   |  |
+|  +--------+ +--------+ +--------+ +--------+  |
+|                                               |
+|  [Impressions & Clicks Chart - Line/Area]     |
+|                                               |
+|  [Daily Breakdown Table]                      |
+|                                               |
++-----------------------------------------------+
 ```
 
-### 3. AdSense Integration Component
+---
 
-**New file: `src/components/ads/AdSenseUnit.tsx`**
+## Feature 4: Ad Creative Preview
 
-For programmatic ads when custom ads are unavailable:
-- Loads the AdSense script dynamically
-- Renders responsive in-feed ad unit
-- Handles ad-blocker detection gracefully
-- Falls back to empty state if blocked
+Allow advertisers to preview exactly how their ad will appear in the video feed before publishing.
 
-### 4. Video Feed Modification
+### Frontend Changes
 
-**Modified file: `src/components/video/VideoFeed.tsx`**
+**Create `src/components/advertiser/AdPreview.tsx`**:
+- Full-screen phone frame mockup
+- Renders `AdCard` component with form data
+- Shows "Sponsored" badge, advertiser info, CTA
+- Toggle between video and image preview
 
-Inject ads at configured intervals:
-- Fetch active ads from database
-- Insert ad cards at positions based on `ad_frequency`
-- Track which ads have been shown to avoid repeats
-- Handle mixed content (videos + ads) in snap scroll
+**Create `src/components/advertiser/PhoneMockup.tsx`**:
+- iPhone-style bezel frame
+- Correct aspect ratio (9:16)
+- Dark background to simulate feed
 
-### 5. Admin Dashboard - Ads Tab
+**Modify `src/pages/AdvertiserDashboard.tsx`**:
+- Add "Preview" tab in campaign editor dialog
+- Live preview updates as form fields change
+- Side-by-side editor and preview on desktop
 
-**New file: `src/components/admin/AdsManagement.tsx`**
+### Preview Features
 
-Admin interface for managing advertisements:
-- Create/edit custom ad campaigns
-- Upload video or image creative
-- Set scheduling and priority
-- View performance metrics (impressions, clicks, CTR)
-- Toggle AdSense integration on/off
-- Configure ad frequency
+- Live video playback (muted by default)
+- Simulated bottom navigation bar
+- "Learn More" button interaction demo
+- Mobile and desktop viewport toggle
 
-**Modified file: `src/pages/AdminDashboard.tsx`**
-- Add "Ads" tab to existing admin navigation
+### Visual Design
 
-### 6. Analytics Hook
+```text
++----------------------------------+-------------+
+|  Create New Campaign             |   Preview   |
++----------------------------------+-------------+
+|                                  |   +-----+   |
+|  Campaign Title *                |   |     |   |
+|  [________________]              |   |PHONE|   |
+|                                  |   |MOCK |   |
+|  Description                     |   | UP  |   |
+|  [________________]              |   |     |   |
+|                                  |   |     |   |
+|  Video Creative                  |   +-----+   |
+|  [Upload] or [URL]               |             |
+|                                  | [Mobile ▼]  |
++----------------------------------+-------------+
+```
 
-**New file: `src/hooks/useAdAnalytics.ts`**
+---
 
-Track ad performance:
-- Log impressions when ad enters viewport
-- Track click events
-- Measure view duration
-- Send data to `ad_analytics` table
+## Feature 5: Test Budget Tracking UI
 
-### 7. Security Considerations
+Ensure the existing budget tracking implementation works correctly end-to-end.
 
-- RLS policies on ads table: public read for active ads, admin-only write
-- Rate limiting on click tracking to prevent fraud
-- Validate click URLs are HTTPS
-- Sanitize ad content for XSS prevention
+### Verification Steps
+
+1. Navigate to `/advertiser` dashboard
+2. Create a new campaign with budget limits:
+   - Set total budget (e.g., $100)
+   - Set daily budget (e.g., $10)
+   - Set CPM and CPC rates
+3. Verify budget display in campaigns table
+4. Confirm `BudgetStatusCard` shows correct progress bars
+5. Test status badges (Active, Low, Exhausted)
+
+---
+
+## Implementation Order
+
+| Phase | Feature | Priority | Complexity |
+|-------|---------|----------|------------|
+| 1 | Test Budget UI | High | Low |
+| 2 | Ad Creative Preview | High | Medium |
+| 3 | Performance Reports | High | Medium |
+| 4 | Budget Alert Notifications | Medium | High |
+| 5 | Enhanced Targeting | Medium | High |
 
 ---
 
@@ -129,20 +242,29 @@ Track ad performance:
 
 | Action | File |
 |--------|------|
-| Create | `src/components/video/AdCard.tsx` |
-| Create | `src/components/ads/AdSenseUnit.tsx` |
-| Create | `src/components/admin/AdsManagement.tsx` |
-| Create | `src/hooks/useAdAnalytics.ts` |
-| Create | `src/types/ad.ts` |
+| Create | `src/pages/AdAnalytics.tsx` |
+| Create | `src/components/advertiser/AdPreview.tsx` |
+| Create | `src/components/advertiser/PhoneMockup.tsx` |
+| Create | `src/components/advertiser/PerformanceCharts.tsx` |
+| Create | `src/components/advertiser/MetricsComparison.tsx` |
+| Create | `src/components/advertiser/PerformanceTable.tsx` |
+| Create | `src/components/advertiser/LocationTargeting.tsx` |
+| Create | `src/components/advertiser/DeviceTargeting.tsx` |
+| Create | `src/components/advertiser/NotificationSettings.tsx` |
+| Create | `supabase/functions/send-budget-alerts/index.ts` |
+| Create | `supabase/functions/check-budget-thresholds/index.ts` |
+| Modify | `src/pages/AdvertiserDashboard.tsx` |
 | Modify | `src/components/video/VideoFeed.tsx` |
-| Modify | `src/pages/AdminDashboard.tsx` |
-| Create | Database migration for ads tables |
+| Modify | `src/types/ad.ts` |
+| Create | Database migrations for new tables and functions |
 
 ---
 
-## User Experience
+## Technical Notes
 
-1. **Viewers**: See sponsored content every 5 videos (configurable), clearly labeled as "Sponsored"
-2. **Admins**: Full control over ad campaigns, scheduling, and monetization settings
-3. **Advertisers**: Can provide video/image creatives with click-through URLs
-4. **Fallback**: Google AdSense fills empty slots when no custom ads are available
+- **Email Service**: Will use Lovable AI's built-in capabilities or Resend integration for email delivery
+- **Charts**: Uses existing recharts library (already installed) for consistency with Analytics page
+- **Real-time Updates**: Budget status can use Supabase realtime subscriptions for live updates
+- **Geolocation**: Browser geolocation API or IP-based lookup for location targeting
+- **Performance**: Consider caching aggregated analytics data with materialized views
+
