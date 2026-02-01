@@ -1329,7 +1329,7 @@ export type Database = {
       refresh_trending_cache: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "verified"
+      app_role: "admin" | "moderator" | "verified" | "advertiser"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1457,7 +1457,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "verified"],
+      app_role: ["admin", "moderator", "verified", "advertiser"],
     },
   },
 } as const
