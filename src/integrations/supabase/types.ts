@@ -597,6 +597,90 @@ export type Database = {
         }
         Relationships: []
       }
+      creator_earnings: {
+        Row: {
+          ad_id: string | null
+          created_at: string
+          creator_id: string
+          creator_share: number
+          event_type: string
+          gross_revenue: number
+          id: string
+          share_percentage: number
+          video_id: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          created_at?: string
+          creator_id: string
+          creator_share?: number
+          event_type: string
+          gross_revenue?: number
+          id?: string
+          share_percentage?: number
+          video_id?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          created_at?: string
+          creator_id?: string
+          creator_share?: number
+          event_type?: string
+          gross_revenue?: number
+          id?: string
+          share_percentage?: number
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_earnings_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_earnings_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_summary: {
+        Row: {
+          creator_id: string
+          id: string
+          last_payout_at: string | null
+          pending_payout: number
+          total_clicks: number
+          total_earnings: number
+          total_impressions: number
+          updated_at: string
+        }
+        Insert: {
+          creator_id: string
+          id?: string
+          last_payout_at?: string | null
+          pending_payout?: number
+          total_clicks?: number
+          total_earnings?: number
+          total_impressions?: number
+          updated_at?: string
+        }
+        Update: {
+          creator_id?: string
+          id?: string
+          last_payout_at?: string | null
+          pending_payout?: number
+          total_clicks?: number
+          total_earnings?: number
+          total_impressions?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -1553,6 +1637,15 @@ export type Database = {
       record_ad_spend: {
         Args: { p_ad_id: string; p_event_type: string }
         Returns: boolean
+      }
+      record_creator_earning: {
+        Args: {
+          p_ad_id: string
+          p_event_type: string
+          p_revenue: number
+          p_video_id: string
+        }
+        Returns: undefined
       }
       refresh_trending_cache: { Args: never; Returns: undefined }
       reset_daily_ad_spend: { Args: never; Returns: undefined }

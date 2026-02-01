@@ -37,6 +37,7 @@ import Onboarding from "./pages/Onboarding";
 import DuetRecording from "./pages/DuetRecording";
 import AdvertiserDashboard from "./pages/AdvertiserDashboard";
 import AdAnalytics from "./pages/AdAnalytics";
+import CreatorEarnings from "./pages/CreatorEarnings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => {
                       <Route path="/admin" element={<AdminDashboard />} />
                       <Route path="/advertiser" element={<AdvertiserDashboard />} />
                       <Route path="/advertiser/analytics" element={<AdAnalytics />} />
+                      <Route path="/earnings" element={<CreatorEarnings />} />
                       <Route path="/duet/:videoId" element={<DuetRecording />} />
                       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                       <Route path="*" element={<NotFound />} />

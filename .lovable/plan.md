@@ -4,6 +4,14 @@
 
 This plan implements five major features to enhance the advertising system: advanced targeting options, budget alert notifications, detailed performance reports, and a live ad preview feature.
 
+## Additional Features (Post-Plan)
+
+| Feature | Status |
+|---------|--------|
+| Smart Ad Targeting in Feed | ✅ Done |
+| In-App Notification Bell | ✅ Done |
+| Creator Revenue Sharing | ✅ Done |
+
 ## Implementation Summary
 
 | Phase | Feature | Status |

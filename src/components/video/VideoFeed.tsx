@@ -7,6 +7,7 @@ import { FeedItem, Ad, AdSettings } from "@/types/ad";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBlockedUsers } from "@/hooks/useBlockedUsers";
+import { useSmartAdTargeting } from "@/hooks/useSmartAdTargeting";
 import { Loader2 } from "lucide-react";
 
 interface VideoFeedProps {
@@ -24,6 +25,7 @@ export function VideoFeed({
 }: VideoFeedProps) {
   const { user } = useAuth();
   const { blockedUsers } = useBlockedUsers();
+  const { getTargetedAds } = useSmartAdTargeting(user?.id);
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -351,6 +353,8 @@ export function VideoFeed({
     const customAdsEnabled = adSettings?.custom_ads_enabled ?? true;
     const adsenseEnabled = adSettings?.adsense_enabled ?? false;
     
+    // Apply smart targeting to sort ads by relevance
+    const targetedAds = getTargetedAds(ads);
     let adIndex = 0;
 
     videos.forEach((video, index) => {
@@ -359,9 +363,9 @@ export function VideoFeed({
       // Insert ad after every N videos (but not after the last one)
       const position = index + 1;
       if (position % frequency === 0 && index < videos.length - 1) {
-        if (customAdsEnabled && ads.length > 0) {
-          // Rotate through available ads
-          const ad = ads[adIndex % ads.length];
+        if (customAdsEnabled && targetedAds.length > 0) {
+          // Use targeted ads (sorted by relevance score)
+          const ad = targetedAds[adIndex % targetedAds.length];
           if (!shownAdIds.current.has(ad.id)) {
             shownAdIds.current.add(ad.id);
           }
@@ -374,7 +378,7 @@ export function VideoFeed({
     });
 
     return items;
-  }, [videos, ads, adSettings]);
+  }, [videos, ads, adSettings, getTargetedAds]);
 
   const handleScroll = () => {
     const container = containerRef.current;
