@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_analytics: {
+        Row: {
+          ad_id: string
+          created_at: string
+          event_type: string
+          id: string
+          user_id: string | null
+          view_duration_ms: number | null
+        }
+        Insert: {
+          ad_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          user_id?: string | null
+          view_duration_ms?: number | null
+        }
+        Update: {
+          ad_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          user_id?: string | null
+          view_duration_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_analytics_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_settings: {
+        Row: {
+          ad_frequency: number
+          adsense_client_id: string | null
+          adsense_enabled: boolean
+          adsense_slot_id: string | null
+          custom_ads_enabled: boolean
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ad_frequency?: number
+          adsense_client_id?: string | null
+          adsense_enabled?: boolean
+          adsense_slot_id?: string | null
+          custom_ads_enabled?: boolean
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ad_frequency?: number
+          adsense_client_id?: string | null
+          adsense_enabled?: boolean
+          adsense_slot_id?: string | null
+          custom_ads_enabled?: boolean
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       admin_logs: {
         Row: {
           action_type: string
@@ -41,6 +109,66 @@ export type Database = {
           id?: string
           target_id?: string
           target_type?: string
+        }
+        Relationships: []
+      }
+      ads: {
+        Row: {
+          advertiser_logo_url: string | null
+          advertiser_name: string
+          click_url: string
+          clicks_count: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          impressions_count: number
+          priority: number
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          advertiser_logo_url?: string | null
+          advertiser_name: string
+          click_url: string
+          clicks_count?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          impressions_count?: number
+          priority?: number
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          advertiser_logo_url?: string | null
+          advertiser_name?: string
+          click_url?: string
+          clicks_count?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          impressions_count?: number
+          priority?: number
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
