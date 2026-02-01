@@ -1,5 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isValidUUID, validationErrorResponse } from "../_shared/validation.ts";
+import {
+  createSecurityLog,
+  logSecurityEvent,
+  getClientIp,
+  createTimer,
+} from "../_shared/logger.ts";
+
+const FUNCTION_NAME = "delete-user-data";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,8 +21,18 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const timer = createTimer();
+  const clientIp = getClientIp(req);
+
   // Only allow POST method
   if (req.method !== "POST") {
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, "method_not_allowed", clientIp, {
+      level: "warn",
+      success: false,
+      durationMs: timer(),
+      metadata: { method: req.method },
+    }));
+
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
       { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -25,6 +43,12 @@ Deno.serve(async (req) => {
     // Get auth token from request
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "missing_auth", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+      }));
+
       return new Response(
         JSON.stringify({ error: "Missing authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -33,6 +57,12 @@ Deno.serve(async (req) => {
 
     // Validate auth header format
     if (!authHeader.startsWith("Bearer ")) {
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "invalid_auth_format", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+      }));
+
       return new Response(
         JSON.stringify({ error: "Invalid authorization header format" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -52,6 +82,12 @@ Deno.serve(async (req) => {
     // Verify the user is authenticated
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "unauthorized", clientIp, {
+        level: "warn",
+        success: false,
+        durationMs: timer(),
+      }));
+
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -59,6 +95,14 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
+
+    // Log the deletion request start
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, "deletion_started", clientIp, {
+      level: "info",
+      success: true,
+      userId,
+      metadata: { stage: "initiated" },
+    }));
 
     // Validate user ID is a proper UUID (defense in depth)
     if (!isValidUUID(userId)) {
@@ -219,7 +263,15 @@ Deno.serve(async (req) => {
     const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     
     if (deleteUserError) {
-      console.error("Error deleting auth user:", deleteUserError);
+      logSecurityEvent(createSecurityLog(FUNCTION_NAME, "deletion_partial_failure", clientIp, {
+        level: "error",
+        success: false,
+        userId,
+        durationMs: timer(),
+        error: deleteUserError.message,
+        metadata: { partialDeletion: deletionResults },
+      }));
+
       return new Response(
         JSON.stringify({ 
           error: "Failed to delete auth account", 
@@ -229,6 +281,14 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, "deletion_complete", clientIp, {
+      level: "info",
+      success: true,
+      userId,
+      durationMs: timer(),
+      metadata: { deletedCounts: deletionResults },
+    }));
 
     return new Response(
       JSON.stringify({ 
@@ -240,7 +300,13 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Error in delete-user-data:", error);
+    logSecurityEvent(createSecurityLog(FUNCTION_NAME, "internal_error", clientIp, {
+      level: "error",
+      success: false,
+      durationMs: timer(),
+      error: error instanceof Error ? error.message : "Unknown error",
+    }));
+
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
