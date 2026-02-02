@@ -34,40 +34,43 @@ export function SeriesPosterCard({
   onClick,
 }: SeriesPosterCardProps) {
   const navigate = useNavigate();
-  const [coverUrl, setCoverUrl] = useState<string | null>(series.cover_image_url);
-  const [loading, setLoading] = useState(!series.cover_image_url && !!series.cover_video_id);
+  const [coverUrl, setCoverUrl] = useState<string | null>(series.cover_image_url || null);
+  const [loading, setLoading] = useState(!series.cover_image_url);
 
-  // If no cover image but has cover_video_id, fetch the video thumbnail
+  // Fetch cover: prioritize cover_image_url > cover_video_id thumbnail > first video thumbnail
   useEffect(() => {
     async function fetchCoverFromVideo() {
+      // If we already have a cover image URL, use it
       if (series.cover_image_url) {
         setCoverUrl(series.cover_image_url);
         setLoading(false);
         return;
       }
 
-      if (!series.cover_video_id) {
-        // No cover image and no cover video, try to get first video thumbnail
+      setLoading(true);
+
+      // If there's a designated cover video, fetch its thumbnail
+      if (series.cover_video_id) {
         const { data } = await supabase
           .from("videos")
-          .select("thumbnail_url, video_url")
-          .eq("series_id", series.id)
-          .order("series_order", { ascending: true })
-          .limit(1)
+          .select("thumbnail_url")
+          .eq("id", series.cover_video_id)
           .maybeSingle();
 
         if (data?.thumbnail_url) {
           setCoverUrl(data.thumbnail_url);
+          setLoading(false);
+          return;
         }
-        setLoading(false);
-        return;
       }
 
-      // Fetch cover video thumbnail
+      // Fallback: get first video (part 1) thumbnail
       const { data } = await supabase
         .from("videos")
-        .select("thumbnail_url, video_url")
-        .eq("id", series.cover_video_id)
+        .select("thumbnail_url")
+        .eq("series_id", series.id)
+        .order("series_order", { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (data?.thumbnail_url) {
