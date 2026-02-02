@@ -1,256 +1,253 @@
 
-# Premium Feel UI Enhancement Plan
 
-This plan transforms the app's visual design from its current "Bold Creator" aesthetic into a more refined, luxury experience while maintaining usability. The changes focus on sophisticated animations, elevated surfaces, refined typography, and premium micro-interactions.
+# Enhanced Series Edit Features Plan
 
----
-
-## Overview of Changes
-
-The premium redesign introduces:
-- **Refined color palette** with deeper, richer dark surfaces and subtle gradients
-- **Elevated glassmorphism** with stronger blur effects and luminous borders
-- **Sophisticated typography** with better hierarchy and letter spacing
-- **Premium micro-interactions** including smooth spring animations and haptic-like feedback
-- **Subtle glow effects** on primary elements for a luxurious feel
-- **Enhanced depth** through layered shadows and surface elevation
+This plan adds comprehensive editing capabilities to the Series Manager, transforming it into a full-featured editing experience for creators.
 
 ---
 
-## 1. Enhanced Color System
+## Overview of New Features
 
-Update the dark theme CSS variables for a richer, more premium feel:
+### 1. Set Cover from Part Video
+Allow creators to select any video from the series as the cover (uses that video's thumbnail as the poster image)
 
-### Changes to `src/index.css`:
+### 2. Custom Thumbnail Generation
+Option to capture a frame from a video to use as cover, or select from video thumbnails
 
-**Dark Theme Colors:**
-- Deeper card backgrounds with subtle purple undertones
-- Richer muted foregrounds for better contrast
-- New "gold" accent for premium indicators
-- Enhanced border colors with subtle luminosity
-- Premium shadow definitions
+### 3. Series Visibility/Status
+Toggle series between Public, Unlisted, or Draft status
 
-**New CSS Variables:**
+### 4. Bulk Video Management
+- Select multiple videos at once for removal
+- Quick "Select All" / "Deselect All" actions
+
+### 5. Edit Individual Video Captions
+Inline editing of video captions directly from the series manager
+
+### 6. Series Analytics Preview
+Quick stats panel showing engagement trends
+
+### 7. Duplicate/Archive Series
+Create a copy of the series or archive it (hide without deleting)
+
+### 8. Quick Actions Menu
+Three-dot menu per video with: Set as Cover, Edit Caption, Move to Top, Move to Bottom, Remove
+
+---
+
+## Implementation Details
+
+### File: `src/components/video/SeriesManager.tsx`
+
+**New State Variables:**
+```typescript
+const [selectionMode, setSelectionMode] = useState(false);
+const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+const [editingCaptionId, setEditingCaptionId] = useState<string | null>(null);
+const [editingCaption, setEditingCaption] = useState("");
 ```
---card: 260 12% 8%;           /* Richer card background */
---popover: 260 12% 6%;        /* Deeper popover */
---muted: 260 12% 12%;         /* Refined muted */
---border: 260 15% 16%;        /* Subtle luminous border */
---gold: 45 93% 58%;           /* Premium gold accent */
---glow-primary: 258 89% 66% / 0.15;  /* Glow effect */
+
+**New Features to Add:**
+
+1. **Cover Selection Mode**
+   - Add a "Choose Cover" section in the edit panel
+   - Display grid of video thumbnails to pick from
+   - Option: "Use Part 1 thumbnail" | "Custom upload" | "Select from videos"
+
+2. **Video Quick Actions Menu**
+   - Replace simple trash button with dropdown menu containing:
+     - Set as Series Cover
+     - Edit Caption
+     - Move to Top
+     - Move to Bottom  
+     - Remove from Series
+
+3. **Bulk Selection**
+   - Toggle button to enter "Select Mode"
+   - Checkbox appears on each video
+   - Bulk action bar at bottom: "Remove Selected (X)"
+
+4. **Inline Caption Editing**
+   - Tap caption to enter edit mode
+   - Small input field replaces caption text
+   - Save/Cancel buttons
+
+5. **Series Settings Section**
+   - Collapsible section with additional options:
+     - Series visibility (Public/Unlisted/Draft)
+     - Allow followers to get notifications
+     - Archive series option
+
+---
+
+### File: `src/hooks/useVideoSeries.ts`
+
+**New Functions to Add:**
+
+```typescript
+// Set a video as the cover source
+const setCoverFromVideo = async (seriesId: string, videoId: string): Promise<boolean>
+
+// Update video caption
+const updateVideoCaption = async (videoId: string, caption: string): Promise<boolean>
+
+// Bulk remove videos from series
+const bulkRemoveFromSeries = async (videoIds: string[]): Promise<boolean>
+
+// Move video to specific position
+const moveVideoToPosition = async (seriesId: string, videoId: string, position: 'top' | 'bottom'): Promise<boolean>
+
+// Duplicate series
+const duplicateSeries = async (seriesId: string): Promise<VideoSeries | null>
+
+// Archive series (soft delete)
+const archiveSeries = async (seriesId: string): Promise<boolean>
 ```
 
 ---
 
-## 2. New Premium Utility Classes
+### File: New Component `src/components/video/SeriesVideoActions.tsx`
 
-Add sophisticated utility classes for premium effects:
+A dropdown menu component for individual video actions:
 
-### New utilities in `src/index.css`:
-
-**Glow Effects:**
-- `.glow-primary` - Subtle purple glow for primary buttons/elements
-- `.glow-gold` - Gold glow for premium badges
-- `.glow-soft` - Ambient glow for cards
-
-**Enhanced Glass Effects:**
-- `.glass-premium` - Stronger blur with luminous border
-- `.glass-card` - Elevated card with inner glow
-
-**Premium Borders:**
-- `.border-luminous` - Subtle gradient border effect
-- `.border-glow` - Border with outer glow
-
-**Typography:**
-- `.text-premium` - Slightly increased letter-spacing, refined weight
-- `.text-display` - Large display text with gradient option
-
-**Animations:**
-- `.animate-glow-pulse` - Subtle pulsing glow
-- `.animate-float` - Gentle floating effect
-- `.spring-bounce` - Spring physics for interactions
-
----
-
-## 3. Enhanced Navigation Components
-
-### Bottom Navigation (`BottomNav.tsx`):
-- Stronger backdrop blur (xl → 2xl)
-- Subtle top border glow effect
-- Refined active state with glow indicator
-- Premium upload button with animated gradient border
-- Smoother hover/active transitions
-
-### Feed Tabs (`FeedTabs.tsx`):
-- Enhanced glass effect background
-- Active indicator with glow effect
-- Refined typography with tracking
-- Subtle shadow for depth
-
----
-
-## 4. Premium Card & Surface Design
-
-### Card Component (`card.tsx`):
-- Add subtle inner shadow for depth
-- Luminous border on hover
-- Enhanced shadow hierarchy
-- Optional glow variant for featured content
-
-### Settings Item (`SettingsItem.tsx`):
-- Refined hover states with subtle glow
-- Better icon contrast
-- Premium chevron styling
-- Smooth transitions
-
----
-
-## 5. Button Refinements
-
-### Button Component (`button.tsx`):
-- Primary: Add subtle glow on hover
-- Enhanced shadow depth
-- Refined active states with spring animation
-- New "premium" variant with gold accents
-
----
-
-## 6. Enhanced Video Card Experience
-
-### VideoCard Overlay:
-- Richer gradient overlays
-- Subtle vignette effect for depth
-- Enhanced action button styling with glow
-
-### VideoInfo:
-- Better text shadows for readability
-- Refined avatar border with subtle glow
-- Premium sound indicator animation
-
----
-
-## 7. Premium Page Enhancements
-
-### Profile Page:
-- Enhanced avatar with subtle ring glow
-- Refined stats display with better spacing
-- Premium follow button styling
-- Elevated bio section
-
-### Settings Page:
-- Refined section headers with tracking
-- Enhanced user card with glow border
-- Premium badges with subtle shine
-
-### Auth Page:
-- Premium input fields with focus glow
-- Enhanced button styling
-- Refined form layout with better spacing
-
-### Discover Page:
-- Glassmorphic search bar with glow focus
-- Enhanced video grid with hover effects
-- Refined section headers
-
----
-
-## 8. Animation Enhancements
-
-### New Keyframes:
-```css
-/* Gentle floating effect */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+```typescript
+interface SeriesVideoActionsProps {
+  video: Video;
+  isFirst: boolean;
+  isLast: boolean;
+  isCoverVideo: boolean;
+  onSetAsCover: () => void;
+  onEditCaption: () => void;
+  onMoveToTop: () => void;
+  onMoveToBottom: () => void;
+  onRemove: () => void;
 }
+```
 
-/* Glow pulse for premium elements */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px hsl(var(--primary) / 0.2); }
-  50% { box-shadow: 0 0 30px hsl(var(--primary) / 0.35); }
+**Menu Options:**
+- Set as Cover (star icon) - disabled if already cover
+- Edit Caption (pencil icon)
+- Move to Top (arrow-up icon) - disabled if first
+- Move to Bottom (arrow-down icon) - disabled if last
+- Remove from Series (trash icon, red)
+
+---
+
+### File: New Component `src/components/video/SeriesCoverPicker.tsx`
+
+A modal/sheet for selecting series cover:
+
+```typescript
+interface SeriesCoverPickerProps {
+  series: VideoSeries;
+  videos: Video[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCoverSelected: (type: 'video' | 'upload', value: string | File) => void;
 }
+```
 
-/* Spring entrance */
-@keyframes spring-in {
-  0% { transform: scale(0.9); opacity: 0; }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); opacity: 1; }
-}
+**UI Layout:**
+- Header: "Choose Series Cover"
+- Section 1: "Use Video Thumbnail" - Grid of video thumbnails to select from
+- Section 2: "Upload Custom Image" - Upload button with preview
+- Currently selected indicator (checkmark on selected option)
 
-/* Shimmer for premium loading */
-@keyframes premium-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+---
+
+### File: `src/types/video.ts`
+
+**Update VideoSeries Interface:**
+```typescript
+export interface VideoSeries {
+  // ... existing fields
+  status?: 'public' | 'unlisted' | 'draft' | 'archived';
+  notifications_enabled?: boolean;
 }
 ```
 
 ---
 
-## 9. Tailwind Config Updates
+### Database Changes
 
-### New colors in `tailwind.config.ts`:
-- `gold` color with DEFAULT and foreground
-- `glow` utilities for shadow effects
+**Optional Migration** (if we want to persist series status):
+```sql
+-- Add status column to video_series table
+ALTER TABLE video_series 
+ADD COLUMN status TEXT DEFAULT 'public' CHECK (status IN ('public', 'unlisted', 'draft', 'archived'));
 
-### New animations:
-- `float` - 3s ease infinite
-- `glow-pulse` - 2s ease infinite
-- `spring-in` - 0.4s spring
-- `premium-shimmer` - 1.5s linear infinite
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/index.css` | Enhanced color variables, new utility classes, premium animations |
-| `tailwind.config.ts` | New colors, keyframes, and animation definitions |
-| `src/components/layout/BottomNav.tsx` | Premium glass effect, glow indicators |
-| `src/components/layout/FeedTabs.tsx` | Enhanced glass, refined typography |
-| `src/components/ui/button.tsx` | Add glow effects, premium variant |
-| `src/components/ui/card.tsx` | Luminous borders, enhanced shadows |
-| `src/components/settings/SettingsItem.tsx` | Refined hover states |
-| `src/components/video/VideoInfo.tsx` | Better text shadows, premium avatar |
-| `src/pages/Auth.tsx` | Premium input styling, enhanced buttons |
-| `src/pages/Settings.tsx` | Premium user card, refined sections |
-| `src/pages/Profile.tsx` | Avatar glow, enhanced stats |
-| `src/pages/Discover.tsx` | Glassmorphic search, premium grid |
+-- Add notifications preference
+ALTER TABLE video_series
+ADD COLUMN notifications_enabled BOOLEAN DEFAULT true;
+```
 
 ---
 
-## Technical Details
+## UI/UX Enhancements
 
-### CSS Strategy
-All premium effects use CSS-only implementations for performance:
-- Hardware-accelerated transforms and opacity
-- CSS custom properties for dynamic theming
-- Minimal JavaScript for interactions
+### Enhanced SeriesManager Layout
 
-### Performance Considerations
-- Backdrop filters are optimized for mobile
-- Animations use `will-change` sparingly
-- Glow effects use subtle opacity to avoid rendering issues
-- All effects gracefully degrade on lower-end devices
-
-### Accessibility
-- All color contrast ratios maintained or improved
-- Focus states enhanced with visible glow rings
-- Motion preferences respected via `prefers-reduced-motion`
+```
++-----------------------------------------------+
+|  [X]              Edit Series                 |
++-----------------------------------------------+
+| [Cover Image]  | Title: [editable input]      |
+| (tap to change)| Desc: [editable textarea]    |
+|                | [Save Changes]               |
++-----------------------------------------------+
+| [Select Mode Toggle]          [Add Videos +]  |
++-----------------------------------------------+
+| PARTS (drag to reorder)                       |
+|                                               |
+| [≡] [thumb] Part 1 | "caption..." | [•••]    |
+| [≡] [thumb] Part 2 | "caption..." | [•••]    |
+| [≡] [thumb] Part 3 | "caption..." | [•••]    |
+|                                               |
++-----------------------------------------------+
+| [Bulk Actions Bar - when in select mode]      |
+| "3 selected"  [Remove Selected]  [Cancel]     |
++-----------------------------------------------+
+|                                               |
+| [Save Order]  (when changes pending)          |
+| [More Options ▼]                              |
+|   - Duplicate Series                          |
+|   - Archive Series                            |
+|   - Delete Series                             |
++-----------------------------------------------+
+```
 
 ---
 
-## Visual Summary
+## Files to Create/Modify
 
-**Before → After:**
+| File | Action | Description |
+|------|--------|-------------|
+| `src/components/video/SeriesManager.tsx` | Modify | Add new editing features, selection mode, quick actions |
+| `src/components/video/SeriesVideoActions.tsx` | Create | Dropdown menu for per-video actions |
+| `src/components/video/SeriesCoverPicker.tsx` | Create | Cover selection modal |
+| `src/hooks/useVideoSeries.ts` | Modify | Add new functions for enhanced operations |
+| `src/types/video.ts` | Modify | Add status and notification fields to VideoSeries |
 
-| Element | Current | Premium |
-|---------|---------|---------|
-| Cards | Flat with basic border | Subtle inner glow, luminous hover border |
-| Buttons | Solid with basic shadow | Glow on hover, spring press effect |
-| Navigation | Basic blur backdrop | Strong blur, glowing active indicator |
-| Inputs | Solid background | Focus glow ring, elevated surface |
-| Badges | Flat colors | Subtle shimmer, refined shadows |
-| Typography | Standard weights | Refined tracking, better hierarchy |
+---
 
-This transformation creates a cohesive premium aesthetic while maintaining the app's performance and usability.
+## Premium UI Touches
+
+All new components will follow the existing premium design:
+- Glass-morphic backgrounds with blur effects
+- Smooth spring animations for selections
+- Glow effects on interactive elements  
+- Gold accents for "cover" badges and premium actions
+- Responsive touch targets for mobile
+
+---
+
+## Summary
+
+This enhancement transforms the Series Manager from a basic reordering tool into a comprehensive editing suite:
+
+1. **Cover Management**: Pick from videos or upload custom
+2. **Video Quick Actions**: Per-video dropdown with all common actions
+3. **Bulk Operations**: Multi-select for efficient management
+4. **Inline Editing**: Edit captions without leaving the manager
+5. **Advanced Options**: Duplicate, archive, visibility controls
+
