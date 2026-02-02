@@ -25,6 +25,8 @@ export interface VideoSeries {
   created_at: string;
   updated_at: string;
   cover_video?: Video;
+  status?: string;
+  notifications_enabled?: boolean;
 }
 
 export interface Video {

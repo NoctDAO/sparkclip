@@ -1345,6 +1345,8 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          notifications_enabled: boolean | null
+          status: string | null
           title: string
           total_views: number
           updated_at: string
@@ -1357,6 +1359,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          notifications_enabled?: boolean | null
+          status?: string | null
           title: string
           total_views?: number
           updated_at?: string
@@ -1369,6 +1373,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          notifications_enabled?: boolean | null
+          status?: string | null
           title?: string
           total_views?: number
           updated_at?: string

@@ -247,6 +247,175 @@ export function useVideoSeries() {
     return data as Video;
   }, []);
 
+  // Set a video's thumbnail as the series cover
+  const setCoverFromVideo = useCallback(async (seriesId: string, videoId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    // Get the video's thumbnail
+    const { data: video, error: videoError } = await supabase
+      .from("videos")
+      .select("thumbnail_url")
+      .eq("id", videoId)
+      .single();
+
+    if (videoError || !video?.thumbnail_url) {
+      toast({ title: "Failed to get video thumbnail", variant: "destructive" });
+      return false;
+    }
+
+    const { error } = await supabase
+      .from("video_series")
+      .update({ cover_video_id: videoId, cover_image_url: video.thumbnail_url })
+      .eq("id", seriesId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Failed to update series cover", variant: "destructive" });
+      return false;
+    }
+
+    toast({ title: "Series cover updated" });
+    return true;
+  }, [user, toast]);
+
+  // Update video caption
+  const updateVideoCaption = useCallback(async (videoId: string, caption: string): Promise<boolean> => {
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from("videos")
+      .update({ caption })
+      .eq("id", videoId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Failed to update caption", variant: "destructive" });
+      return false;
+    }
+
+    return true;
+  }, [user, toast]);
+
+  // Bulk remove videos from series
+  const bulkRemoveFromSeries = useCallback(async (videoIds: string[]): Promise<boolean> => {
+    if (!user || videoIds.length === 0) return false;
+
+    const { error } = await supabase
+      .from("videos")
+      .update({ series_id: null, series_order: null })
+      .in("id", videoIds)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Failed to remove videos from series", variant: "destructive" });
+      return false;
+    }
+
+    toast({ title: `Removed ${videoIds.length} video${videoIds.length > 1 ? 's' : ''} from series` });
+    return true;
+  }, [user, toast]);
+
+  // Move video to specific position (top or bottom)
+  const moveVideoToPosition = useCallback(async (
+    seriesId: string,
+    videoId: string,
+    position: 'top' | 'bottom'
+  ): Promise<boolean> => {
+    if (!user) return false;
+
+    // Get all videos in series
+    const { data: videos, error: fetchError } = await supabase
+      .from("videos")
+      .select("id, series_order")
+      .eq("series_id", seriesId)
+      .order("series_order", { ascending: true });
+
+    if (fetchError || !videos) {
+      toast({ title: "Failed to reorder videos", variant: "destructive" });
+      return false;
+    }
+
+    const currentIndex = videos.findIndex(v => v.id === videoId);
+    if (currentIndex === -1) return false;
+
+    // Already at target position
+    if (position === 'top' && currentIndex === 0) return true;
+    if (position === 'bottom' && currentIndex === videos.length - 1) return true;
+
+    // Remove video from current position
+    const reorderedVideos = videos.filter(v => v.id !== videoId);
+    const targetVideo = videos[currentIndex];
+
+    // Insert at new position
+    if (position === 'top') {
+      reorderedVideos.unshift(targetVideo);
+    } else {
+      reorderedVideos.push(targetVideo);
+    }
+
+    // Update all series_order values
+    const updates = reorderedVideos.map((video, index) =>
+      supabase
+        .from("videos")
+        .update({ series_order: index + 1 })
+        .eq("id", video.id)
+        .eq("series_id", seriesId)
+    );
+
+    const results = await Promise.all(updates);
+    const hasError = results.some(r => r.error);
+
+    if (hasError) {
+      toast({ title: "Failed to reorder videos", variant: "destructive" });
+      return false;
+    }
+
+    return true;
+  }, [user, toast]);
+
+  // Update series status
+  const updateSeriesStatus = useCallback(async (
+    seriesId: string,
+    status: 'public' | 'unlisted' | 'draft' | 'archived'
+  ): Promise<boolean> => {
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from("video_series")
+      .update({ status })
+      .eq("id", seriesId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Failed to update series status", variant: "destructive" });
+      return false;
+    }
+
+    toast({ title: `Series ${status === 'archived' ? 'archived' : 'visibility updated'}` });
+    return true;
+  }, [user, toast]);
+
+  // Toggle series notifications
+  const toggleSeriesNotifications = useCallback(async (
+    seriesId: string,
+    enabled: boolean
+  ): Promise<boolean> => {
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from("video_series")
+      .update({ notifications_enabled: enabled })
+      .eq("id", seriesId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Failed to update notification settings", variant: "destructive" });
+      return false;
+    }
+
+    return true;
+  }, [user, toast]);
+
   return {
     loading,
     createSeries,
@@ -261,5 +430,11 @@ export function useVideoSeries() {
     getNextPartNumber,
     getNextVideoInSeries,
     getPreviousVideoInSeries,
+    setCoverFromVideo,
+    updateVideoCaption,
+    bulkRemoveFromSeries,
+    moveVideoToPosition,
+    updateSeriesStatus,
+    toggleSeriesNotifications,
   };
 }
