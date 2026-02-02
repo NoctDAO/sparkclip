@@ -15,7 +15,7 @@ export default function Messages() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { conversations, loading, refetch, getOrCreateConversation } = useConversations();
+  const { conversations, loading, refetch, getOrCreateConversation, deleteConversation } = useConversations();
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
@@ -92,6 +92,7 @@ export default function Messages() {
               <ConversationList
                 conversations={conversations}
                 loading={loading}
+                onDelete={deleteConversation}
               />
             </div>
           </>
@@ -117,6 +118,7 @@ export default function Messages() {
               loading={loading}
               selectedId={conversationId}
               onSelect={(c) => navigate(`/messages/${c.id}`)}
+              onDelete={deleteConversation}
             />
           </div>
         </div>

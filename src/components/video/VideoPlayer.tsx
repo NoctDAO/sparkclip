@@ -11,9 +11,10 @@ interface VideoPlayerProps {
   bottomNavVisible?: boolean;
   onVideoEnd?: () => void;
   posterUrl?: string;
+  onProgressUpdate?: (progress: number, duration: number) => void;
 }
 
-export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true, onVideoEnd, posterUrl }: VideoPlayerProps) {
+export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisible = true, onVideoEnd, posterUrl, onProgressUpdate }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -126,7 +127,12 @@ export function VideoPlayer({ src, isActive, videoId, className, bottomNavVisibl
     
     const currentProgress = (video.currentTime / video.duration) * 100;
     setProgress(currentProgress);
-  }, []);
+    
+    // Notify parent of progress update for watch history tracking
+    if (onProgressUpdate) {
+      onProgressUpdate(video.currentTime / video.duration, video.currentTime);
+    }
+  }, [onProgressUpdate]);
 
   useEffect(() => {
     const video = videoRef.current;

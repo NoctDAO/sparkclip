@@ -12,6 +12,7 @@ import { Video } from "@/types/video";
 import { useAuth } from "@/hooks/useAuth";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
 import { useSeriesAutoPlay } from "@/hooks/useSeriesAutoPlay";
+import { useWatchHistory } from "@/hooks/useWatchHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,14 @@ export function VideoCard({
   const { toast } = useToast();
   const { getNextVideoInSeries, getPreviousVideoInSeries } = useVideoSeries();
   const { autoPlayEnabled } = useSeriesAutoPlay();
+  const { recordWatchProgress } = useWatchHistory();
+
+  // Handler for watch history progress tracking
+  const handleProgressUpdate = useCallback((progress: number, duration: number) => {
+    if (video.id) {
+      recordWatchProgress(video.id, progress, duration);
+    }
+  }, [video.id, recordWatchProgress]);
   const [showComments, setShowComments] = useState(false);
   const [showSeriesViewer, setShowSeriesViewer] = useState(false);
   const [liked, setLiked] = useState(isLiked);
@@ -306,6 +315,7 @@ export function VideoCard({
           videoId={video.id} 
           bottomNavVisible={bottomNavVisible}
           onVideoEnd={video.series_id ? handleVideoEnd : undefined}
+          onProgressUpdate={handleProgressUpdate}
         />
       </div>
 

@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SwipeAction } from "@/components/ui/swipe-action";
 import { Conversation } from "@/types/message";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -10,6 +12,7 @@ interface ConversationListProps {
   loading: boolean;
   selectedId?: string;
   onSelect?: (conversation: Conversation) => void;
+  onDelete?: (conversationId: string) => void;
 }
 
 export function ConversationList({
@@ -17,8 +20,16 @@ export function ConversationList({
   loading,
   selectedId,
   onSelect,
+  onDelete,
 }: ConversationListProps) {
   const navigate = useNavigate();
+
+  const handleDelete = (conversationId: string) => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(50);
+    }
+    onDelete?.(conversationId);
+  };
 
   if (loading) {
     return (
@@ -64,51 +75,61 @@ export function ConversationList({
         const hasUnread = (conversation.unread_count || 0) > 0;
 
         return (
-          <button
+          <SwipeAction
             key={conversation.id}
-            onClick={() => handleClick(conversation)}
-            className={cn(
-              "flex items-center gap-3 w-full p-4 text-left transition-colors hover:bg-secondary/50",
-              selectedId === conversation.id && "bg-secondary/50",
-              hasUnread && "bg-secondary/30"
-            )}
+            onSwipeLeft={onDelete ? () => handleDelete(conversation.id) : undefined}
+            leftAction={{
+              icon: <Trash2 className="w-5 h-5" />,
+              label: "Delete",
+              color: "bg-destructive",
+            }}
+            disabled={!onDelete}
           >
-            <Avatar className="w-12 h-12 shrink-0">
-              <AvatarImage src={conversation.other_user?.avatar_url || undefined} />
-              <AvatarFallback className="bg-muted text-foreground">
-                {displayName[0].toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <button
+              onClick={() => handleClick(conversation)}
+              className={cn(
+                "flex items-center gap-3 w-full p-4 text-left transition-colors hover:bg-secondary/50",
+                selectedId === conversation.id && "bg-secondary/50",
+                hasUnread && "bg-secondary/30"
+              )}
+            >
+              <Avatar className="w-12 h-12 shrink-0">
+                <AvatarImage src={conversation.other_user?.avatar_url || undefined} />
+                <AvatarFallback className="bg-muted text-foreground">
+                  {displayName[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <p className={cn("font-semibold truncate", hasUnread && "text-foreground")}>
-                  {displayName}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className={cn("font-semibold truncate", hasUnread && "text-foreground")}>
+                    {displayName}
+                  </p>
+                  {conversation.last_message && (
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {formatDistanceToNow(new Date(conversation.last_message.created_at), {
+                        addSuffix: false,
+                      })}
+                    </span>
+                  )}
+                </div>
+                <p
+                  className={cn(
+                    "text-sm truncate",
+                    hasUnread ? "text-foreground font-medium" : "text-muted-foreground"
+                  )}
+                >
+                  {lastMessage}
                 </p>
-                {conversation.last_message && (
-                  <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                    {formatDistanceToNow(new Date(conversation.last_message.created_at), {
-                      addSuffix: false,
-                    })}
-                  </span>
-                )}
               </div>
-              <p
-                className={cn(
-                  "text-sm truncate",
-                  hasUnread ? "text-foreground font-medium" : "text-muted-foreground"
-                )}
-              >
-                {lastMessage}
-              </p>
-            </div>
 
-            {hasUnread && (
-              <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0">
-                {conversation.unread_count}
-              </div>
-            )}
-          </button>
+              {hasUnread && (
+                <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0">
+                  {conversation.unread_count}
+                </div>
+              )}
+            </button>
+          </SwipeAction>
         );
       })}
     </div>

@@ -1,21 +1,23 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye, Lock, Ban, MoreHorizontal, Layers, Pencil, Plus } from "lucide-react";
+import { Settings, Grid3X3, Bookmark, Heart, ArrowLeft, Eye, Lock, Ban, MoreHorizontal, Layers, Pencil, Plus, Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { VideoThumbnail } from "@/components/video/VideoThumbnail";
-import { VideoGridSkeleton } from "@/components/ui/skeleton";
+import { VideoGridSkeleton, ProfileHeaderSkeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { useUserPrivacy } from "@/hooks/useUserPrivacy";
 import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
+import { useWatchHistory } from "@/hooks/useWatchHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { SeriesManager } from "@/components/video/SeriesManager";
 import { CreateSeriesSheet } from "@/components/video/CreateSeriesSheet";
@@ -38,6 +40,7 @@ export default function Profile() {
   } = useUserPrivacy(userId);
   const { blockUser, unblockUser, isUserBlocked } = useBlockedUsers();
   const { getUserSeries } = useVideoSeries();
+  const { watchHistory, loading: historyLoading, fetchWatchHistory } = useWatchHistory();
   
   const isBlocked = userId ? isUserBlocked(userId) : false;
   
@@ -192,8 +195,19 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-[var(--app-height)] bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-[var(--app-height)] bg-background pb-safe-nav">
+        <header className="flex items-center justify-between p-4">
+          <button onClick={() => navigate(-1)} className="p-2">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div className="w-24 h-5 bg-muted rounded animate-pulse" />
+          <div className="w-10" />
+        </header>
+        <ProfileHeaderSkeleton />
+        <div className="mt-4 px-2">
+          <VideoGridSkeleton count={6} />
+        </div>
+        <BottomNav />
       </div>
     );
   }
@@ -420,6 +434,15 @@ export default function Profile() {
           >
             <Layers className="w-5 h-5" />
           </TabsTrigger>
+          {/* History tab - only for own profile */}
+          {isOwnProfile && (
+            <TabsTrigger 
+              value="history" 
+              className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+            >
+              <Clock className="w-5 h-5" />
+            </TabsTrigger>
+          )}
           {/* Show liked videos tab if own profile OR if privacy allows */}
           {(isOwnProfile || canViewLikedVideos()) && (
             <TabsTrigger 
@@ -546,6 +569,51 @@ export default function Profile() {
             </div>
           )}
         </TabsContent>
+
+        {/* Watch History tab - only for own profile */}
+        {isOwnProfile && (
+          <TabsContent value="history" className="mt-0">
+            {historyLoading ? (
+              <div className="p-2">
+                <VideoGridSkeleton count={6} />
+              </div>
+            ) : watchHistory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Clock className="w-12 h-12 mb-2" />
+                <p>No watch history yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-0.5">
+                {watchHistory.map((entry) => entry.video && (
+                  <div 
+                    key={entry.id} 
+                    className="relative group"
+                    onClick={() => navigate(`/?video=${entry.video_id}`)}
+                  >
+                    <VideoThumbnail
+                      thumbnailUrl={entry.video.thumbnail_url}
+                      videoUrl={entry.video.video_url}
+                      alt={entry.video.caption || "Video"}
+                      className="rounded-sm cursor-pointer"
+                    />
+                    {/* Progress bar overlay */}
+                    <div className="absolute bottom-0 left-0 right-0">
+                      <Progress 
+                        value={entry.watch_progress * 100} 
+                        className="h-1 rounded-none bg-black/50" 
+                      />
+                    </div>
+                    {/* View count overlay */}
+                    <div className="absolute bottom-2 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg pointer-events-none">
+                      <Eye className="w-3 h-3" />
+                      <span>{formatCount(entry.video.views_count || 0)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
 
         {/* Liked videos tab - show for own profile or when privacy allows */}
         {(isOwnProfile || canViewLikedVideos()) && (

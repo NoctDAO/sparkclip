@@ -61,8 +61,8 @@ serve(async (req) => {
     // If no cache hit, compute recommendations
     if (!cacheHit) {
       if (userId) {
-        // Parallel fetch of user preferences using Promise.all
-        const [likesRes, followsRes] = await Promise.all([
+        // Parallel fetch of user preferences + content preferences using Promise.all
+        const [likesRes, followsRes, preferencesRes] = await Promise.all([
           supabase
             .from("likes")
             .select("video_id")
@@ -73,7 +73,23 @@ serve(async (req) => {
             .from("follows")
             .select("following_id")
             .eq("follower_id", userId),
+          supabase
+            .from("content_preferences")
+            .select("target_id, preference_type")
+            .eq("user_id", userId)
+            .in("preference_type", ["not_interested_video", "not_interested_creator"]),
         ]);
+
+        // Build excluded sets from content preferences
+        const notInterestedVideoIds = new Set<string>();
+        const notInterestedCreatorIds = new Set<string>();
+        preferencesRes.data?.forEach((pref) => {
+          if (pref.preference_type === "not_interested_video") {
+            notInterestedVideoIds.add(pref.target_id);
+          } else if (pref.preference_type === "not_interested_creator") {
+            notInterestedCreatorIds.add(pref.target_id);
+          }
+        });
 
         const likedVideoIds = likesRes.data?.map(l => l.video_id) || [];
         const followedUserIds = followsRes.data?.map(f => f.following_id) || [];
@@ -110,7 +126,11 @@ serve(async (req) => {
             .range(offset, offset + Math.floor(limit / 2) - 1);
 
           if (followedVideos) {
-            recommendations.push(...followedVideos);
+            // Filter out not-interested videos and creators
+            const filteredFollowed = followedVideos.filter(
+              (v) => !notInterestedVideoIds.has(v.id) && !notInterestedCreatorIds.has(v.user_id)
+            );
+            recommendations.push(...filteredFollowed);
           }
         }
 
@@ -128,7 +148,12 @@ serve(async (req) => {
             .limit(limit);
 
           if (hashtagVideos) {
-            const newVideos = hashtagVideos.filter(v => !existingIds.has(v.id));
+            const newVideos = hashtagVideos.filter(
+              (v) => 
+                !existingIds.has(v.id) && 
+                !notInterestedVideoIds.has(v.id) && 
+                !notInterestedCreatorIds.has(v.user_id)
+            );
             recommendations.push(...newVideos.slice(0, limit - recommendations.length));
           }
         }
@@ -161,7 +186,11 @@ serve(async (req) => {
                 .eq("visibility", "public");
 
               if (trendingVideos) {
-                recommendations.push(...trendingVideos);
+                // Filter out not-interested videos and creators
+                const filteredTrending = trendingVideos.filter(
+                  (v) => !notInterestedVideoIds.has(v.id) && !notInterestedCreatorIds.has(v.user_id)
+                );
+                recommendations.push(...filteredTrending);
               }
             }
           }
