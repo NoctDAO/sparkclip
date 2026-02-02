@@ -176,10 +176,11 @@ export default function SeriesDetail() {
           </div>
         </header>
 
-        {/* Series Info */}
+        {/* Series Hero */}
         <div className="p-4 border-b border-border">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {/* Movie Poster Style Cover */}
+            <div className="w-28 aspect-[2/3] rounded-xl bg-card border border-border/50 shadow-lg overflow-hidden flex-shrink-0 relative">
               {series.cover_image_url ? (
                 <img 
                   src={series.cover_image_url} 
@@ -187,15 +188,24 @@ export default function SeriesDetail() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <Layers className="w-8 h-8 text-primary" />
+                <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/10 to-background flex flex-col items-center justify-center p-3">
+                  <Layers className="w-10 h-10 text-primary/60 mb-2" />
+                </div>
               )}
+              {/* Overlay gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+              {/* Parts badge */}
+              <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 bg-background/90 backdrop-blur-sm rounded-full text-[10px] font-semibold">
+                <Layers className="w-3 h-3 text-primary" />
+                <span>{series.videos_count} parts</span>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold">{series.title}</h2>
+            <div className="flex-1 min-w-0 py-1">
+              <h2 className="text-xl font-bold leading-tight">{series.title}</h2>
               {series.description && (
-                <p className="text-muted-foreground mt-1 text-sm">{series.description}</p>
+                <p className="text-muted-foreground mt-2 text-sm line-clamp-3">{series.description}</p>
               )}
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground mt-3">
                 Created {formatDate(series.created_at)}
               </p>
             </div>
@@ -301,20 +311,20 @@ export default function SeriesDetail() {
               <p>No videos in this series yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
               {videos.map((video) => (
                 <button
                   key={video.id}
                   onClick={() => navigate(`/video/${video.id}`)}
-                  className="w-full flex gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors text-left"
+                  className="flex-shrink-0 w-28 group"
                 >
-                  {/* Thumbnail */}
-                  <div className="w-24 h-36 bg-muted rounded-lg overflow-hidden relative flex-shrink-0">
+                  {/* Movie Poster Thumbnail */}
+                  <div className="aspect-[2/3] bg-card rounded-xl overflow-hidden relative shadow-md group-hover:shadow-lg transition-all group-hover:-translate-y-1">
                     {video.thumbnail_url ? (
                       <img
                         src={video.thumbnail_url}
                         alt={`Part ${video.series_order}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <video
@@ -323,47 +333,33 @@ export default function SeriesDetail() {
                         muted
                       />
                     )}
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     {/* Part badge */}
-                    <div className="absolute top-1 left-1 px-2 py-0.5 bg-background/90 rounded text-xs font-semibold">
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-background/90 backdrop-blur-sm rounded-full text-[10px] font-bold">
                       Part {video.series_order}
                     </div>
-                    {/* Play overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-10 h-10 rounded-full bg-background/80 flex items-center justify-center">
-                        <Play className="w-5 h-5 fill-current" />
+                    {/* Play overlay on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-10 h-10 rounded-full bg-primary/90 flex items-center justify-center shadow-lg">
+                        <Play className="w-4 h-4 text-primary-foreground fill-primary-foreground ml-0.5" />
+                      </div>
+                    </div>
+                    {/* Bottom info */}
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <div className="flex items-center gap-1 text-white/80 text-[10px]">
+                        <Eye className="w-3 h-3" />
+                        <span>{formatCount(video.views_count)}</span>
                       </div>
                     </div>
                   </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0 py-1">
-                    <p className="font-medium line-clamp-2">
-                      {video.caption || `Part ${video.series_order}`}
-                    </p>
-                    
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        {formatCount(video.views_count)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-3 h-3" />
-                        {formatCount(video.likes_count)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle className="w-3 h-3" />
-                        {formatCount(video.comments_count)}
-                      </span>
-                    </div>
-
-                    {/* Date */}
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {formatDate(video.created_at)}
-                    </p>
-                  </div>
+                  {/* Caption below */}
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2 px-0.5">
+                    {video.caption || `Part ${video.series_order}`}
+                  </p>
                 </button>
               ))}
+
             </div>
           )}
         </div>
