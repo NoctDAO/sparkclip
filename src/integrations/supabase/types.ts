@@ -573,6 +573,30 @@ export type Database = {
         }
         Relationships: []
       }
+      content_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          preference_type: string
+          target_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          preference_type: string
+          target_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          preference_type?: string
+          target_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string | null
@@ -1492,6 +1516,44 @@ export type Database = {
             columns: ["sound_id"]
             isOneToOne: false
             referencedRelation: "sounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watch_history: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          video_id: string
+          watch_duration: number
+          watch_progress: number
+          watched_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          video_id: string
+          watch_duration?: number
+          watch_progress?: number
+          watched_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          video_id?: string
+          watch_duration?: number
+          watch_progress?: number
+          watched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_history_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
             referencedColumns: ["id"]
           },
         ]

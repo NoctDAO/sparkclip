@@ -6,18 +6,22 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { TrendingSection } from "@/components/trending/TrendingSection";
 import { TrendingSeries } from "@/components/trending/TrendingSeries";
 import { TrendingSounds } from "@/components/sounds/TrendingSounds";
+import { ContinueWatching } from "@/components/discover/ContinueWatching";
+import { VideoGridSkeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Video } from "@/types/video";
 
 export default function Discover() {
   const navigate = useNavigate();
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchTrendingVideos();
   }, []);
 
   const fetchTrendingVideos = async () => {
+    setIsLoading(true);
     const { data } = await supabase
       .from("videos")
       .select("*")
@@ -27,6 +31,7 @@ export default function Discover() {
     if (data) {
       setTrendingVideos(data as Video[]);
     }
+    setIsLoading(false);
   };
 
   const formatCount = (count: number) => {
@@ -106,6 +111,9 @@ export default function Discover() {
         </button>
       </div>
 
+      {/* Continue Watching - for logged in users */}
+      <ContinueWatching />
+
       {/* Trending Section */}
       <TrendingSection />
 
@@ -118,7 +126,10 @@ export default function Discover() {
       {/* Explore Videos Grid */}
       <div className="px-4 pb-4">
         <h2 className="font-bold text-lg mb-3">Explore</h2>
-        <div className="grid grid-cols-3 gap-1">
+        {isLoading ? (
+          <VideoGridSkeleton count={12} />
+        ) : (
+          <div className="grid grid-cols-3 gap-1">
           {trendingVideos.map((video) => (
             <div
               key={video.id}
@@ -146,7 +157,8 @@ export default function Discover() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       <BottomNav />

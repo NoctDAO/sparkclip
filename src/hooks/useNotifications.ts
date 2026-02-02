@@ -155,6 +155,32 @@ export function useNotifications() {
       .eq("user_id", user.id);
   }, [user]);
 
+  const deleteNotification = useCallback(async (notificationId: string) => {
+    if (!user) return false;
+
+    // Optimistic update
+    const notif = notifications.find((n) => n.id === notificationId);
+    const wasUnread = notif && !notif.is_read;
+
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    if (wasUnread) {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", notificationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      // Revert on error
+      fetchNotifications();
+      return false;
+    }
+    return true;
+  }, [user, notifications, fetchNotifications]);
+
   const markAllAsRead = useCallback(async () => {
     if (!user) return;
 
@@ -230,6 +256,7 @@ export function useNotifications() {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     createNotification,
   };
 }

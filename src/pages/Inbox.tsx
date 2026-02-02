@@ -5,12 +5,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { SwipeAction } from "@/components/ui/swipe-action";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Notification } from "@/types/video";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 function getNotificationMessage(notification: Notification): string {
   const actorName = notification.actor?.display_name || notification.actor?.username || "Someone";
@@ -147,8 +149,9 @@ function NotificationSkeleton() {
 export default function Inbox() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState("all");
+  const { toast } = useToast();
 
   if (!user) {
     return (
@@ -252,11 +255,25 @@ export default function Inbox() {
           ) : (
             <div className="divide-y divide-border">
               {filteredNotifications.map((notification) => (
-                <NotificationItem
+                <SwipeAction
                   key={notification.id}
-                  notification={notification}
-                  onRead={() => markAsRead(notification.id)}
-                />
+                  onSwipeLeft={() => {
+                    if (!notification.is_read) markAsRead(notification.id);
+                  }}
+                  onSwipeRight={async () => {
+                    const success = await deleteNotification(notification.id);
+                    if (success) {
+                      toast({ title: "Notification deleted" });
+                    }
+                  }}
+                  leftAction={{ label: "Read", color: "bg-green-500" }}
+                  rightAction={{ label: "Delete", color: "bg-destructive" }}
+                >
+                  <NotificationItem
+                    notification={notification}
+                    onRead={() => markAsRead(notification.id)}
+                  />
+                </SwipeAction>
               ))}
             </div>
           )}

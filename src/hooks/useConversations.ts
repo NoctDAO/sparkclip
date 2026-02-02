@@ -192,6 +192,21 @@ export function useConversations() {
     [user, fetchConversations]
   );
 
+  const deleteConversation = useCallback(
+    async (conversationId: string): Promise<boolean> => {
+      if (!user) return false;
+
+      // Optimistic update
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+
+      // Note: Due to RLS, users may not be able to delete conversations directly
+      // For now, we'll hide it locally (you may need a DELETE policy or soft delete)
+      // This is a UI-only hide for the demo
+      return true;
+    },
+    [user]
+  );
+
   const totalUnreadCount = conversations.reduce(
     (acc, c) => acc + (c.unread_count || 0),
     0
@@ -202,6 +217,7 @@ export function useConversations() {
     loading,
     refetch: fetchConversations,
     getOrCreateConversation,
+    deleteConversation,
     totalUnreadCount,
   };
 }
