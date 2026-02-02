@@ -5,6 +5,12 @@ import { Search as SearchIcon, X, Clock, TrendingUp, ArrowLeft } from "lucide-re
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { 
+  VideoGridSkeleton, 
+  CreatorCardSkeleton, 
+  HashtagChipSkeleton, 
+  Skeleton 
+} from "@/components/ui/skeleton";
 import { useSearch } from "@/hooks/useSearch";
 import { VideoResults } from "@/components/search/VideoResults";
 import { UserResults } from "@/components/search/UserResults";
@@ -189,8 +195,42 @@ export default function Search() {
               </TabsList>
 
               {isLoading ? (
-                <div className="flex justify-center py-12">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="p-4">
+                  {activeTab === "videos" && <VideoGridSkeleton count={9} />}
+                  {activeTab === "users" && (
+                    <div className="space-y-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2">
+                          <Skeleton className="w-12 h-12 rounded-full" shimmer />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-32" shimmer />
+                            <Skeleton className="h-3 w-24" shimmer />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {activeTab === "series" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-28 rounded-lg" shimmer />
+                      ))}
+                    </div>
+                  )}
+                  {activeTab === "sounds" && (
+                    <div className="space-y-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2">
+                          <Skeleton className="w-14 h-14 rounded-lg" shimmer />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-40" shimmer />
+                            <Skeleton className="h-3 w-28" shimmer />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {activeTab === "hashtags" && <HashtagChipSkeleton count={8} />}
                 </div>
               ) : totalResults === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
