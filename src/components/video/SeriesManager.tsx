@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, GripVertical, Eye, Trash2, Play, AlertTriangle, Pencil, Check, ImagePlus, Loader2, Plus } from "lucide-react";
+import { 
+  X, GripVertical, Eye, Trash2, Play, AlertTriangle, Pencil, Check, ImagePlus, Loader2, Plus, 
+  CheckSquare, Square, Settings2, ChevronDown, Copy, Archive, Globe, EyeOff, FileEdit, Bell, BellOff
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -24,6 +27,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +41,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useVideoSeries } from "@/hooks/useVideoSeries";
 import { AddVideoToSeriesSheet } from "@/components/video/AddVideoToSeriesSheet";
+import { SeriesVideoActions } from "@/components/video/SeriesVideoActions";
+import { SeriesCoverPicker } from "@/components/video/SeriesCoverPicker";
 import { VideoSeries, Video } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -49,11 +56,45 @@ interface SeriesManagerProps {
 
 interface SortableVideoItemProps {
   video: Video;
+  selectionMode: boolean;
+  isSelected: boolean;
+  isCoverVideo: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+  editingCaptionId: string | null;
+  editingCaption: string;
+  onToggleSelect: (videoId: string) => void;
   onRemove: (videoId: string) => void;
   onPlay: (video: Video) => void;
+  onSetAsCover: (video: Video) => void;
+  onEditCaption: (video: Video) => void;
+  onSaveCaption: (videoId: string) => void;
+  onCancelCaptionEdit: () => void;
+  onCaptionChange: (value: string) => void;
+  onMoveToTop: (video: Video) => void;
+  onMoveToBottom: (video: Video) => void;
 }
 
-function SortableVideoItem({ video, onRemove, onPlay }: SortableVideoItemProps) {
+function SortableVideoItem({ 
+  video, 
+  selectionMode,
+  isSelected,
+  isCoverVideo,
+  isFirst,
+  isLast,
+  editingCaptionId,
+  editingCaption,
+  onToggleSelect,
+  onRemove, 
+  onPlay,
+  onSetAsCover,
+  onEditCaption,
+  onSaveCaption,
+  onCancelCaptionEdit,
+  onCaptionChange,
+  onMoveToTop,
+  onMoveToBottom,
+}: SortableVideoItemProps) {
   const {
     attributes,
     listeners,
@@ -74,28 +115,45 @@ function SortableVideoItem({ video, onRemove, onPlay }: SortableVideoItemProps) 
     return count.toString();
   };
 
+  const isEditingCaption = editingCaptionId === video.id;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-3 p-3 bg-secondary rounded-lg transition-colors",
-        isDragging && "opacity-50 ring-2 ring-primary"
+        "flex items-center gap-3 p-3 bg-secondary rounded-lg transition-all",
+        isDragging && "opacity-50 ring-2 ring-primary",
+        isSelected && "ring-2 ring-primary bg-primary/10",
+        isCoverVideo && "ring-1 ring-[hsl(var(--gold))]/50"
       )}
     >
-      {/* Drag handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="p-1 cursor-grab active:cursor-grabbing touch-none"
-      >
-        <GripVertical className="w-5 h-5 text-muted-foreground" />
-      </button>
+      {/* Selection checkbox or drag handle */}
+      {selectionMode ? (
+        <button
+          onClick={() => onToggleSelect(video.id)}
+          className="p-1 touch-none"
+        >
+          {isSelected ? (
+            <CheckSquare className="w-5 h-5 text-primary" />
+          ) : (
+            <Square className="w-5 h-5 text-muted-foreground" />
+          )}
+        </button>
+      ) : (
+        <button
+          {...attributes}
+          {...listeners}
+          className="p-1 cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        </button>
+      )}
 
       {/* Thumbnail */}
       <div 
         className="w-12 h-20 bg-muted rounded overflow-hidden relative flex-shrink-0 cursor-pointer"
-        onClick={() => onPlay(video)}
+        onClick={() => !selectionMode && onPlay(video)}
       >
         {video.thumbnail_url ? (
           <img
@@ -110,32 +168,69 @@ function SortableVideoItem({ video, onRemove, onPlay }: SortableVideoItemProps) 
             muted
           />
         )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
-          <Play className="w-4 h-4 text-white fill-white" />
-        </div>
+        {!selectionMode && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
+            <Play className="w-4 h-4 text-white fill-white" />
+          </div>
+        )}
+        {isCoverVideo && (
+          <div className="absolute top-0.5 left-0.5 bg-[hsl(var(--gold))] text-black text-[8px] font-bold px-1 rounded">
+            COVER
+          </div>
+        )}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm">Part {video.series_order}</p>
-        <p className="text-xs text-muted-foreground truncate">
-          {video.caption || "No caption"}
-        </p>
+        {isEditingCaption ? (
+          <div className="flex items-center gap-1 mt-1">
+            <Input
+              value={editingCaption}
+              onChange={(e) => onCaptionChange(e.target.value)}
+              placeholder="Add caption..."
+              className="h-7 text-xs"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onSaveCaption(video.id);
+                if (e.key === 'Escape') onCancelCaptionEdit();
+              }}
+            />
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onSaveCaption(video.id)}>
+              <Check className="w-3 h-3" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onCancelCaptionEdit}>
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+        ) : (
+          <p 
+            className="text-xs text-muted-foreground truncate cursor-pointer hover:text-foreground transition-colors"
+            onClick={() => onEditCaption(video)}
+          >
+            {video.caption || "No caption - tap to add"}
+          </p>
+        )}
         <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
           <Eye className="w-3 h-3" />
           <span>{formatCount(video.views_count)}</span>
         </div>
       </div>
 
-      {/* Remove button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onRemove(video.id)}
-        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-      >
-        <Trash2 className="w-4 h-4" />
-      </Button>
+      {/* Actions menu */}
+      {!selectionMode && (
+        <SeriesVideoActions
+          video={video}
+          isFirst={isFirst}
+          isLast={isLast}
+          isCoverVideo={isCoverVideo}
+          onSetAsCover={() => onSetAsCover(video)}
+          onEditCaption={() => onEditCaption(video)}
+          onMoveToTop={() => onMoveToTop(video)}
+          onMoveToBottom={() => onMoveToBottom(video)}
+          onRemove={() => onRemove(video.id)}
+        />
+      )}
     </div>
   );
 }
@@ -144,7 +239,11 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { getSeriesVideos, reorderSeries, removeFromSeries, deleteSeries, updateSeries } = useVideoSeries();
+  const { 
+    getSeriesVideos, reorderSeries, removeFromSeries, deleteSeries, updateSeries,
+    setCoverFromVideo, updateVideoCaption, bulkRemoveFromSeries, moveVideoToPosition,
+    updateSeriesStatus, toggleSeriesNotifications
+  } = useVideoSeries();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -162,9 +261,23 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
   const [coverImageUrl, setCoverImageUrl] = useState(series.cover_image_url || "");
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [showCoverPicker, setShowCoverPicker] = useState(false);
   
   // Add video state
   const [showAddVideo, setShowAddVideo] = useState(false);
+
+  // Selection mode state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+  
+  // Caption editing state
+  const [editingCaptionId, setEditingCaptionId] = useState<string | null>(null);
+  const [editingCaption, setEditingCaption] = useState("");
+
+  // Settings state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [seriesStatus, setSeriesStatus] = useState(series.status || 'public');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(series.notifications_enabled !== false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -193,7 +306,12 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
     setEditTitle(series.title);
     setEditDescription(series.description || "");
     setCoverImageUrl(series.cover_image_url || "");
+    setSeriesStatus(series.status || 'public');
+    setNotificationsEnabled(series.notifications_enabled !== false);
     setIsEditing(false);
+    setSelectionMode(false);
+    setSelectedVideoIds(new Set());
+    setEditingCaptionId(null);
   };
 
   const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,6 +367,53 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
       // Reset input
       if (coverInputRef.current) {
         coverInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleCoverSelected = async (type: 'video' | 'upload', value: string | File) => {
+    if (type === 'video') {
+      const success = await setCoverFromVideo(series.id, value as string);
+      if (success) {
+        const video = videos.find(v => v.id === value);
+        if (video?.thumbnail_url) {
+          setCoverImageUrl(video.thumbnail_url);
+        }
+        onSeriesUpdated();
+      }
+    } else if (type === 'upload' && value instanceof File) {
+      // Handle file upload
+      if (!user) return;
+      
+      setUploadingCover(true);
+      try {
+        const fileExt = value.name.split(".").pop();
+        const fileName = `${user.id}/${series.id}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("series-covers")
+          .upload(fileName, value, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("series-covers")
+          .getPublicUrl(fileName);
+
+        const newCoverUrl = urlData.publicUrl;
+        setCoverImageUrl(newCoverUrl);
+
+        const success = await updateSeries(series.id, { cover_image_url: newCoverUrl });
+
+        if (success) {
+          toast({ title: "Cover image updated" });
+          onSeriesUpdated();
+        }
+      } catch (error) {
+        console.error("Error uploading cover image:", error);
+        toast({ title: "Failed to upload cover image", variant: "destructive" });
+      } finally {
+        setUploadingCover(false);
       }
     }
   };
@@ -357,6 +522,114 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
     setIsEditing(false);
   };
 
+  // Selection handlers
+  const handleToggleSelect = (videoId: string) => {
+    setSelectedVideoIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(videoId)) {
+        newSet.delete(videoId);
+      } else {
+        newSet.add(videoId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedVideoIds(new Set(videos.map(v => v.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedVideoIds(new Set());
+  };
+
+  const handleBulkRemove = async () => {
+    if (selectedVideoIds.size === 0) return;
+    
+    const success = await bulkRemoveFromSeries(Array.from(selectedVideoIds));
+    if (success) {
+      setVideos(prev => prev.filter(v => !selectedVideoIds.has(v.id)));
+      setSelectedVideoIds(new Set());
+      setSelectionMode(false);
+      onSeriesUpdated();
+    }
+  };
+
+  // Caption editing handlers
+  const handleEditCaption = (video: Video) => {
+    setEditingCaptionId(video.id);
+    setEditingCaption(video.caption || "");
+  };
+
+  const handleSaveCaption = async (videoId: string) => {
+    const success = await updateVideoCaption(videoId, editingCaption);
+    if (success) {
+      setVideos(prev => prev.map(v => 
+        v.id === videoId ? { ...v, caption: editingCaption } : v
+      ));
+      toast({ title: "Caption updated" });
+    }
+    setEditingCaptionId(null);
+    setEditingCaption("");
+  };
+
+  const handleCancelCaptionEdit = () => {
+    setEditingCaptionId(null);
+    setEditingCaption("");
+  };
+
+  // Move handlers
+  const handleMoveToTop = async (video: Video) => {
+    const success = await moveVideoToPosition(series.id, video.id, 'top');
+    if (success) {
+      await loadSeriesVideos();
+    }
+  };
+
+  const handleMoveToBottom = async (video: Video) => {
+    const success = await moveVideoToPosition(series.id, video.id, 'bottom');
+    if (success) {
+      await loadSeriesVideos();
+    }
+  };
+
+  // Cover handler
+  const handleSetAsCover = async (video: Video) => {
+    const success = await setCoverFromVideo(series.id, video.id);
+    if (success && video.thumbnail_url) {
+      setCoverImageUrl(video.thumbnail_url);
+      onSeriesUpdated();
+    }
+  };
+
+  // Status handler
+  const handleStatusChange = async (status: string) => {
+    const success = await updateSeriesStatus(series.id, status as 'public' | 'unlisted' | 'draft' | 'archived');
+    if (success) {
+      setSeriesStatus(status);
+      onSeriesUpdated();
+    }
+  };
+
+  // Notifications handler
+  const handleNotificationsToggle = async (enabled: boolean) => {
+    const success = await toggleSeriesNotifications(series.id, enabled);
+    if (success) {
+      setNotificationsEnabled(enabled);
+    }
+  };
+
+  const getCoverVideoId = () => {
+    if (series.cover_video_id) return series.cover_video_id;
+    if (coverImageUrl) {
+      const matchingVideo = videos.find(v => v.thumbnail_url === coverImageUrl);
+      if (matchingVideo) return matchingVideo.id;
+    }
+    return null;
+  };
+
+  const coverVideoId = getCoverVideoId();
+
   return (
     <>
       {/* Delete Confirmation Dialog */}
@@ -385,6 +658,17 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Cover Picker Sheet */}
+      <SeriesCoverPicker
+        series={series}
+        videos={videos}
+        open={showCoverPicker}
+        onOpenChange={setShowCoverPicker}
+        onCoverSelected={handleCoverSelected}
+        currentCoverVideoId={coverVideoId}
+      />
+
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
         <SheetHeader className="pb-4">
@@ -396,7 +680,7 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
                   <div className="flex items-start gap-3">
                     <div 
                       className="w-20 h-20 rounded-lg bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer relative group"
-                      onClick={() => !uploadingCover && coverInputRef.current?.click()}
+                      onClick={() => !uploadingCover && setShowCoverPicker(true)}
                     >
                       {uploadingCover ? (
                         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -513,6 +797,33 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
           </div>
         ) : (
           <div className="flex flex-col h-[calc(85vh-180px)]">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
+              <Button
+                variant={selectionMode ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  setSelectedVideoIds(new Set());
+                }}
+              >
+                <CheckSquare className="w-4 h-4 mr-1" />
+                {selectionMode ? "Cancel" : "Select"}
+              </Button>
+              
+              {selectionMode && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                    Select All
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleDeselectAll}>
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Video list */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
               <DndContext
                 sensors={sensors}
@@ -523,18 +834,51 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
                   items={videos.map((v) => v.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {videos.map((video) => (
+                  {videos.map((video, index) => (
                     <SortableVideoItem
                       key={video.id}
                       video={video}
+                      selectionMode={selectionMode}
+                      isSelected={selectedVideoIds.has(video.id)}
+                      isCoverVideo={coverVideoId === video.id}
+                      isFirst={index === 0}
+                      isLast={index === videos.length - 1}
+                      editingCaptionId={editingCaptionId}
+                      editingCaption={editingCaption}
+                      onToggleSelect={handleToggleSelect}
                       onRemove={handleRemoveVideo}
                       onPlay={handlePlayVideo}
+                      onSetAsCover={handleSetAsCover}
+                      onEditCaption={handleEditCaption}
+                      onSaveCaption={handleSaveCaption}
+                      onCancelCaptionEdit={handleCancelCaptionEdit}
+                      onCaptionChange={setEditingCaption}
+                      onMoveToTop={handleMoveToTop}
+                      onMoveToBottom={handleMoveToBottom}
                     />
                   ))}
                 </SortableContext>
               </DndContext>
             </div>
 
+            {/* Bulk action bar */}
+            {selectionMode && selectedVideoIds.size > 0 && (
+              <div className="py-3 px-4 bg-secondary rounded-lg mt-3 flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  {selectedVideoIds.size} selected
+                </span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkRemove}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Remove Selected
+                </Button>
+              </div>
+            )}
+
+            {/* Bottom actions */}
             <div className="pt-4 border-t border-border mt-4 space-y-2">
               <Button
                 variant="outline"
@@ -553,14 +897,89 @@ export function SeriesManager({ series, open, onOpenChange, onSeriesUpdated }: S
                   {saving ? "Saving..." : "Save Order"}
                 </Button>
               )}
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Entire Series
-              </Button>
+
+              {/* Series Settings Collapsible */}
+              <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between">
+                    <span className="flex items-center">
+                      <Settings2 className="w-4 h-4 mr-2" />
+                      Series Settings
+                    </span>
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", settingsOpen && "rotate-180")} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-3">
+                  {/* Visibility */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Visibility</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant={seriesStatus === 'public' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => handleStatusChange('public')}
+                        className="justify-start"
+                      >
+                        <Globe className="w-4 h-4 mr-2" />
+                        Public
+                      </Button>
+                      <Button
+                        variant={seriesStatus === 'unlisted' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => handleStatusChange('unlisted')}
+                        className="justify-start"
+                      >
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Unlisted
+                      </Button>
+                      <Button
+                        variant={seriesStatus === 'draft' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => handleStatusChange('draft')}
+                        className="justify-start"
+                      >
+                        <FileEdit className="w-4 h-4 mr-2" />
+                        Draft
+                      </Button>
+                      <Button
+                        variant={seriesStatus === 'archived' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => handleStatusChange('archived')}
+                        className="justify-start"
+                      >
+                        <Archive className="w-4 h-4 mr-2" />
+                        Archive
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Notifications */}
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-2">
+                      {notificationsEnabled ? (
+                        <Bell className="w-4 h-4 text-primary" />
+                      ) : (
+                        <BellOff className="w-4 h-4 text-muted-foreground" />
+                      )}
+                      <span className="text-sm">Notify followers of new parts</span>
+                    </div>
+                    <Switch
+                      checked={notificationsEnabled}
+                      onCheckedChange={handleNotificationsToggle}
+                    />
+                  </div>
+
+                  {/* Delete */}
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Entire Series
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </div>
         )}
