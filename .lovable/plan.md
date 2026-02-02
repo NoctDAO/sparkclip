@@ -1,289 +1,267 @@
-# Complete Ads Monetization Enhancement Plan
 
-**Status: ✅ IMPLEMENTED**
+# App Enhancement Implementation Plan
 
-This plan implements five major features to enhance the advertising system: advanced targeting options, budget alert notifications, detailed performance reports, and a live ad preview feature.
-
-## Additional Features (Post-Plan)
-
-| Feature | Status |
-|---------|--------|
-| Smart Ad Targeting in Feed | ✅ Done |
-| In-App Notification Bell | ✅ Done |
-| Creator Revenue Sharing | ✅ Done |
-
-## Implementation Summary
-
-| Phase | Feature | Status |
-|-------|---------|--------|
-| 1 | Test Budget UI | ✅ Done |
-| 2 | Ad Creative Preview | ✅ Done |
-| 3 | Performance Reports | ✅ Done |
-| 4 | Budget Alert Notifications | ✅ Done |
-| 5 | Enhanced Targeting | ✅ Done |
+After thorough exploration of the codebase, here's the detailed plan to implement the 5 selected features.
 
 ---
 
-## Feature 1: Enhanced Ad Targeting Options
+## Feature 1: Watch History & Continue Watching
 
-Allow advertisers to target users by interests, location, and content categories for more effective ad delivery.
-
-### Database Changes
-
-**Modify `ads` table** - add new targeting fields:
-- `target_locations` (text array) - geographic targeting by country/region codes
-- `target_age_range` (jsonb) - min/max age range
-- `target_device_types` (text array) - mobile, desktop, tablet
-
-**Create `user_interests` table** - track user content preferences:
-- `id`, `user_id`, `interest_category`, `weight` (engagement score), `updated_at`
-
-**Create database function** `calculate_user_interests`:
-- Analyzes user's liked videos, followed creators, and watch history
-- Assigns weighted scores to each interest category
-- Called periodically or on-demand
-
-### Frontend Changes
-
-**Modify `src/pages/AdvertiserDashboard.tsx`**:
-- Add "Location Targeting" section with multi-select for countries/regions
-- Add "Device Targeting" toggle group (Mobile, Desktop, Tablet)
-- Add "Age Range" slider with min/max inputs
-- Enhance existing interest targeting UI with better category organization
-
-**Modify `src/components/video/VideoFeed.tsx`**:
-- Update ad selection logic to consider user's interests
-- Filter ads based on user's location (from browser/IP)
-- Consider device type when selecting ads
-
-### New Components
-
-**Create `src/components/advertiser/LocationTargeting.tsx`**:
-- Searchable dropdown for countries/regions
-- Selected locations displayed as removable chips
-
-**Create `src/components/advertiser/DeviceTargeting.tsx`**:
-- Toggle group for device type selection
-- Visual icons for each device type
-
----
-
-## Feature 2: Budget Alert Email Notifications
-
-Automatically notify advertisers when campaign budgets are running low or exhausted.
+### What This Does
+Tracks videos users have watched and shows a "Continue Watching" section on the Discover page for videos that weren't fully completed. Users can also view their complete history and clear it from Settings.
 
 ### Database Changes
-
-**Create `notification_preferences` table**:
-- `id`, `user_id`, `notification_type`, `email_enabled`, `in_app_enabled`, `threshold_percent`
-- Stores per-user notification preferences
-
-**Create `email_queue` table**:
-- `id`, `recipient_email`, `recipient_id`, `template_type`, `template_data` (jsonb)
-- `status` (pending, sent, failed), `created_at`, `sent_at`
-
-**Create database trigger** `check_budget_alerts`:
-- Fires on `ads` table update when `daily_spent` or `total_spent` changes
-- Checks if spending crosses 80%, 95%, or 100% thresholds
-- Inserts notification records for processing
-
-### Backend Function
-
-**Create `supabase/functions/send-budget-alerts/index.ts`**:
-- Polls `email_queue` for pending budget alerts
-- Uses Resend API (or similar) to send templated emails
-- Email templates for:
-  - "Budget 80% Spent" warning
-  - "Budget 95% Spent" critical warning
-  - "Campaign Paused" (budget exhausted)
-- Updates queue status after sending
-
-**Create `supabase/functions/check-budget-thresholds/index.ts`**:
-- Scheduled function (runs hourly)
-- Checks all active ads against budget thresholds
-- Creates notifications when thresholds crossed
-- Supports multiple alert levels (80%, 95%, 100%)
-
-### Frontend Changes
-
-**Create `src/components/advertiser/NotificationSettings.tsx`**:
-- Email notification toggle for budget alerts
-- Threshold customization (default 80%)
-- Test email button
-
-**Modify `src/pages/AdvertiserDashboard.tsx`**:
-- Add "Notifications" section in settings
-- Show alert badge on campaigns near budget limit
-
----
-
-## Feature 3: Detailed Ad Performance Reports
-
-Create comprehensive analytics dashboard with charts showing impressions, clicks, CTR, and spend over time.
-
-### Database Changes
-
-**Create materialized view or function** `get_ad_performance_daily`:
-- Aggregates `ad_analytics` by day
-- Returns: date, impressions, clicks, skips, completes, avg_view_duration, spend
-- Supports date range filtering
-
-**Create function** `get_ad_performance_comparison`:
-- Compares current period to previous period
-- Calculates growth percentages
-
-### Frontend Changes
-
-**Create `src/pages/AdAnalytics.tsx`** - dedicated analytics page:
-- Time range selector (7d, 30d, 90d, custom)
-- Campaign filter dropdown
-- Key metrics cards with trend indicators
-
-**Create `src/components/advertiser/PerformanceCharts.tsx`**:
-- Line chart: Impressions & Clicks over time (dual axis)
-- Area chart: Spend over time with budget overlay
-- Bar chart: CTR by day of week
-- Pie chart: Event breakdown (impressions, clicks, skips, completes)
-
-**Create `src/components/advertiser/MetricsComparison.tsx`**:
-- Side-by-side comparison cards
-- Shows current vs previous period
-- Green/red trend arrows
-
-**Create `src/components/advertiser/PerformanceTable.tsx`**:
-- Sortable table with daily breakdown
-- Columns: Date, Impressions, Clicks, CTR, Spend, Avg View Time
-- Export to CSV functionality
-
-### Visual Design
+Create a `watch_history` table with the following structure:
 
 ```text
-+-----------------------------------------------+
-|  Ad Performance Analytics                     |
-|  [Campaign ▼] [Last 30 days ▼] [Export CSV]   |
-+-----------------------------------------------+
-|                                               |
-|  +--------+ +--------+ +--------+ +--------+  |
-|  | Impr.  | | Clicks | |  CTR   | | Spend  |  |
-|  | 12.5K  | |  890   | | 7.12%  | | $125   |  |
-|  | +15%   | | +8%    | | -2%    | | +12%   |  |
-|  +--------+ +--------+ +--------+ +--------+  |
-|                                               |
-|  [Impressions & Clicks Chart - Line/Area]     |
-|                                               |
-|  [Daily Breakdown Table]                      |
-|                                               |
-+-----------------------------------------------+
++------------------+-------------+---------------------+
+| watch_history                                        |
++------------------+-------------+---------------------+
+| id               | uuid        | Primary key         |
+| user_id          | uuid        | References auth.users|
+| video_id         | uuid        | References videos   |
+| watch_progress   | float       | 0.0 to 1.0 percent  |
+| watched_at       | timestamptz | Last watched time   |
+| watch_duration   | integer     | Seconds watched     |
++------------------+-------------+---------------------+
 ```
+
+Row Level Security (RLS) policies:
+- Users can only read/write their own watch history
+- Enable realtime for instant updates
+
+### Files to Create
+1. **`src/hooks/useWatchHistory.ts`**
+   - `recordWatchProgress(videoId, progress, duration)` - debounced updates
+   - `getWatchHistory()` - paginated history
+   - `getContinueWatching()` - videos with 10-90% progress
+   - `clearHistory()` - delete all history
+
+2. **`src/components/discover/ContinueWatching.tsx`**
+   - Horizontal scroll of partially-watched videos
+   - Progress bar overlay on thumbnails
+   - Quick resume functionality
+
+### Files to Modify
+1. **`src/components/video/VideoPlayer.tsx`**
+   - Integrate watch history recording on progress/pause
+   - Debounce to reduce database writes (every 5 seconds)
+
+2. **`src/pages/Discover.tsx`**
+   - Add ContinueWatching component above Trending Section
+
+3. **`src/pages/Profile.tsx`**
+   - Add new "History" tab (clock icon)
+   - Show all watched videos in chronological order
+
+4. **`src/pages/Settings.tsx`**
+   - Add "Clear watch history" option in Privacy section
 
 ---
 
-## Feature 4: Ad Creative Preview
+## Feature 2: Enhanced Video Sharing with QR Code
 
-Allow advertisers to preview exactly how their ad will appear in the video feed before publishing.
+### What This Does
+Adds a QR code sharing option that generates a scannable code linking to the video. Perfect for sharing across devices or in-person.
 
-### Frontend Changes
+### Files to Create
+1. **`src/components/ui/qr-code.tsx`**
+   - Lightweight SVG-based QR code generator (no external dependencies)
+   - Uses existing pattern of inline SVG generation
+   - Configurable size and error correction level
 
-**Create `src/components/advertiser/AdPreview.tsx`**:
-- Full-screen phone frame mockup
-- Renders `AdCard` component with form data
-- Shows "Sponsored" badge, advertiser info, CTA
-- Toggle between video and image preview
+2. **`src/components/video/ShareMenu.tsx`**
+   - Dropdown/sheet with multiple share options:
+     - Copy link
+     - Native share (existing)
+     - Show QR code (new)
+   - QR code dialog with save/download option
 
-**Create `src/components/advertiser/PhoneMockup.tsx`**:
-- iPhone-style bezel frame
-- Correct aspect ratio (9:16)
-- Dark background to simulate feed
+### Files to Modify
+1. **`src/components/video/VideoActions.tsx`**
+   - Replace simple share button with ShareMenu component
+   - Maintain backward compatibility with existing share logic
 
-**Modify `src/pages/AdvertiserDashboard.tsx`**:
-- Add "Preview" tab in campaign editor dialog
-- Live preview updates as form fields change
-- Side-by-side editor and preview on desktop
+---
 
-### Preview Features
+## Feature 3: "Not Interested" Feature
 
-- Live video playback (muted by default)
-- Simulated bottom navigation bar
-- "Learn More" button interaction demo
-- Mobile and desktop viewport toggle
+### What This Does
+Allows users to indicate they don't want to see certain content, improving feed personalization over time.
 
-### Visual Design
+### Database Changes
+Create a `content_preferences` table:
 
 ```text
-+----------------------------------+-------------+
-|  Create New Campaign             |   Preview   |
-+----------------------------------+-------------+
-|                                  |   +-----+   |
-|  Campaign Title *                |   |     |   |
-|  [________________]              |   |PHONE|   |
-|                                  |   |MOCK |   |
-|  Description                     |   | UP  |   |
-|  [________________]              |   |     |   |
-|                                  |   |     |   |
-|  Video Creative                  |   +-----+   |
-|  [Upload] or [URL]               |             |
-|                                  | [Mobile ▼]  |
-+----------------------------------+-------------+
++--------------------+-------------+----------------------+
+| content_preferences                                     |
++--------------------+-------------+----------------------+
+| id                 | uuid        | Primary key          |
+| user_id            | uuid        | References auth.users|
+| preference_type    | text        | 'not_interested_video', 'not_interested_creator', 'not_interested_hashtag' |
+| target_id          | text        | video_id, user_id, or hashtag |
+| created_at         | timestamptz | When preference was set|
++--------------------+-------------+----------------------+
 ```
+
+RLS policies:
+- Users can only manage their own preferences
+
+### Files to Create
+1. **`src/hooks/useContentPreferences.ts`**
+   - `markNotInterested(type, targetId)` - add preference
+   - `undoNotInterested(type, targetId)` - remove preference
+   - `getNotInterestedVideos()` - for feed filtering
+
+### Files to Modify
+1. **`src/components/video/VideoActions.tsx`**
+   - Add "Not Interested" button (eye-off icon) after Report
+   - Show confirmation toast with undo option
+
+2. **`supabase/functions/get-recommendations/index.ts`**
+   - Exclude videos/creators/hashtags from preferences table
+   - Add parallel fetch for user preferences
+
+3. **`src/pages/Settings.tsx`**
+   - Add "Reset content preferences" option in Privacy section
 
 ---
 
-## Feature 5: Test Budget Tracking UI
+## Feature 4: Swipe Actions for Efficiency
 
-Ensure the existing budget tracking implementation works correctly end-to-end.
+### What This Does
+Adds touch-friendly swipe gestures on notification items and conversation list for quick actions like marking as read or deleting.
 
-### Verification Steps
+### Implementation Approach
+Use pure touch event handlers (no additional dependencies) to detect horizontal swipes:
+- Swipe left: Primary action (Mark as read for notifications, Archive for messages)
+- Swipe right: Secondary action (Delete with undo)
 
-1. Navigate to `/advertiser` dashboard
-2. Create a new campaign with budget limits:
-   - Set total budget (e.g., $100)
-   - Set daily budget (e.g., $10)
-   - Set CPM and CPC rates
-3. Verify budget display in campaigns table
-4. Confirm `BudgetStatusCard` shows correct progress bars
-5. Test status badges (Active, Low, Exhausted)
+### Files to Create
+1. **`src/hooks/useSwipeAction.ts`**
+   - Reusable hook for swipe detection
+   - Returns touch handlers and swipe state
+   - Configurable thresholds and actions
+
+2. **`src/components/ui/swipe-action.tsx`**
+   - Wrapper component with action reveal backgrounds
+   - Haptic feedback via navigator.vibrate if available
+   - Smooth spring animations
+
+### Files to Modify
+1. **`src/pages/Inbox.tsx`**
+   - Wrap NotificationItem with swipe functionality
+   - Swipe left: Mark as read
+   - Swipe right: Delete notification
+
+2. **`src/components/messages/ConversationList.tsx`**
+   - Wrap conversation items with swipe functionality
+   - Swipe left: Archive/Mute
+   - Swipe right: Delete conversation
+
+3. **`src/hooks/useNotifications.ts`**
+   - Add `deleteNotification(id)` function
+
+4. **`src/hooks/useConversations.ts`**
+   - Add `deleteConversation(id)` function
+
+---
+
+## Feature 5: Skeleton Loading States Audit & Enhancement
+
+### What This Does
+Ensures consistent skeleton loading states across all pages for a smoother perceived performance, matching the actual content layout.
+
+### Files to Modify
+
+1. **`src/pages/Discover.tsx`**
+   - Add skeleton for TrendingSection while loading
+   - Add skeleton for Explore grid while fetching videos
+
+2. **`src/pages/Profile.tsx`**
+   - Add skeleton for profile header (avatar + stats)
+   - Already has VideoGridSkeleton for videos - ensure consistency
+
+3. **`src/pages/Search.tsx`**
+   - Add skeleton for search results in each tab
+   - Use appropriate skeleton based on result type (grid vs list)
+
+4. **`src/components/trending/TrendingHashtags.tsx`**
+   - Add horizontal scroll skeleton during load
+
+5. **`src/components/trending/TrendingCreators.tsx`**
+   - Add avatar+name skeleton cards during load
+
+6. **`src/components/trending/TrendingVideos.tsx`**
+   - Add video card skeleton during load
+
+7. **`src/components/ui/skeleton.tsx`**
+   - Add new preset: `ProfileHeaderSkeleton` for profile page
+   - Add new preset: `HashtagChipSkeleton` for trending hashtags
+   - Add new preset: `CreatorCardSkeleton` for trending creators
 
 ---
 
 ## Implementation Order
 
-| Phase | Feature | Priority | Complexity |
-|-------|---------|----------|------------|
-| 1 | Test Budget UI | High | Low |
-| 2 | Ad Creative Preview | High | Medium |
-| 3 | Performance Reports | High | Medium |
-| 4 | Budget Alert Notifications | Medium | High |
-| 5 | Enhanced Targeting | Medium | High |
-
----
-
-## File Changes Summary
-
-| Action | File |
-|--------|------|
-| Create | `src/pages/AdAnalytics.tsx` |
-| Create | `src/components/advertiser/AdPreview.tsx` |
-| Create | `src/components/advertiser/PhoneMockup.tsx` |
-| Create | `src/components/advertiser/PerformanceCharts.tsx` |
-| Create | `src/components/advertiser/MetricsComparison.tsx` |
-| Create | `src/components/advertiser/PerformanceTable.tsx` |
-| Create | `src/components/advertiser/LocationTargeting.tsx` |
-| Create | `src/components/advertiser/DeviceTargeting.tsx` |
-| Create | `src/components/advertiser/NotificationSettings.tsx` |
-| Create | `supabase/functions/send-budget-alerts/index.ts` |
-| Create | `supabase/functions/check-budget-thresholds/index.ts` |
-| Modify | `src/pages/AdvertiserDashboard.tsx` |
-| Modify | `src/components/video/VideoFeed.tsx` |
-| Modify | `src/types/ad.ts` |
-| Create | Database migrations for new tables and functions |
+| # | Feature | Complexity | Impact |
+|---|---------|------------|--------|
+| 1 | Watch History & Continue Watching | Medium | High - improves retention |
+| 2 | "Not Interested" | Medium | High - improves personalization |
+| 3 | Enhanced Sharing with QR | Low | Medium - viral growth |
+| 4 | Skeleton Loading Audit | Low | Medium - polish |
+| 5 | Swipe Actions | Medium | Medium - efficiency |
 
 ---
 
 ## Technical Notes
 
-- **Email Service**: Will use Lovable AI's built-in capabilities or Resend integration for email delivery
-- **Charts**: Uses existing recharts library (already installed) for consistency with Analytics page
-- **Real-time Updates**: Budget status can use Supabase realtime subscriptions for live updates
-- **Geolocation**: Browser geolocation API or IP-based lookup for location targeting
-- **Performance**: Consider caching aggregated analytics data with materialized views
+### Database Migration Summary
+Two new tables will be created:
+1. `watch_history` - for tracking video viewing progress
+2. `content_preferences` - for "not interested" signals
 
+Both tables will have RLS enabled with user-scoped policies.
+
+### Performance Considerations
+- Watch history updates will be debounced (5-second interval)
+- Content preferences will be fetched once per feed load and cached
+- QR code generation is client-side only, no server calls
+- Skeletons use CSS animations only (shimmer effect)
+- Swipe detection uses passive touch listeners for smooth scrolling
+
+### Backwards Compatibility
+- All new features are additive and won't break existing functionality
+- Share button retains existing behavior as default action
+- Users without watch history see regular Discover page
+- Feed works normally without content preferences
+
+---
+
+## Files Summary
+
+**New Files (9):**
+- `src/hooks/useWatchHistory.ts`
+- `src/hooks/useContentPreferences.ts`
+- `src/hooks/useSwipeAction.ts`
+- `src/components/discover/ContinueWatching.tsx`
+- `src/components/ui/qr-code.tsx`
+- `src/components/ui/swipe-action.tsx`
+- `src/components/video/ShareMenu.tsx`
+
+**Modified Files (14):**
+- `src/components/video/VideoPlayer.tsx`
+- `src/components/video/VideoActions.tsx`
+- `src/pages/Discover.tsx`
+- `src/pages/Profile.tsx`
+- `src/pages/Settings.tsx`
+- `src/pages/Inbox.tsx`
+- `src/pages/Search.tsx`
+- `src/components/messages/ConversationList.tsx`
+- `src/components/trending/TrendingHashtags.tsx`
+- `src/components/trending/TrendingCreators.tsx`
+- `src/components/trending/TrendingVideos.tsx`
+- `src/components/ui/skeleton.tsx`
+- `src/hooks/useNotifications.ts`
+- `src/hooks/useConversations.ts`
+- `supabase/functions/get-recommendations/index.ts`
