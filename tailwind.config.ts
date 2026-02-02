@@ -47,6 +47,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
         heart: "hsl(var(--heart))",
         share: "hsl(var(--share))",
         comment: "hsl(var(--comment))",
@@ -121,6 +125,33 @@ export default {
           "0%": { opacity: "0", transform: "scale(0.98)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { 
+            boxShadow: "0 0 15px hsl(var(--primary) / 0.2), 0 0 30px hsl(var(--primary) / 0.1)" 
+          },
+          "50%": { 
+            boxShadow: "0 0 25px hsl(var(--primary) / 0.35), 0 0 50px hsl(var(--primary) / 0.15)" 
+          },
+        },
+        "spring-in": {
+          "0%": { transform: "scale(0.9)", opacity: "0" },
+          "60%": { transform: "scale(1.02)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "border-glow": {
+          "0%, 100%": { 
+            borderColor: "hsl(var(--primary) / 0.3)",
+            boxShadow: "0 0 10px hsl(var(--primary) / 0.1)" 
+          },
+          "50%": { 
+            borderColor: "hsl(var(--primary) / 0.5)",
+            boxShadow: "0 0 20px hsl(var(--primary) / 0.2)" 
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -135,6 +166,10 @@ export default {
         "bounce-subtle": "bounce-subtle 0.3s ease-in-out",
         "press": "press 0.15s ease-in-out",
         "image-fade-in": "image-fade-in 0.3s ease-out forwards",
+        "float": "float 3s ease-in-out infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "spring-in": "spring-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "border-glow": "border-glow 2s ease-in-out infinite",
       },
     },
   },

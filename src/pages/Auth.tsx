@@ -57,14 +57,14 @@ export default function Auth() {
     <div className="min-h-[var(--app-height)] bg-background text-foreground flex flex-col">
       {/* Header */}
       <header className="flex items-center p-4">
-        <button onClick={() => navigate(-1)} className="p-2">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-secondary/50 rounded-lg transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
       </header>
 
       <div className="flex-1 flex flex-col px-8 pt-8">
         {/* Title */}
-        <h1 className="text-2xl font-bold mb-2">
+        <h1 className="text-2xl font-bold mb-2 text-display">
           {isSignUp ? "Sign up" : "Log in"}
         </h1>
         <p className="text-muted-foreground mb-8">
@@ -75,9 +75,9 @@ export default function Auth() {
         </p>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-sm font-medium">Email</Label>
             <Input
               id="email"
               type="email"
@@ -85,12 +85,12 @@ export default function Auth() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-secondary border-none h-12"
+              className="bg-secondary/50 border-border/50 h-12 focus-glow transition-all duration-200 hover:bg-secondary/70"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-sm font-medium">Password</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -100,12 +100,12 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="bg-secondary border-none h-12 pr-12"
+                className="bg-secondary/50 border-border/50 h-12 pr-12 focus-glow transition-all duration-200 hover:bg-secondary/70"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -117,7 +117,7 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => navigate("/reset-password")}
-                className="text-sm text-primary hover:underline"
+                className="text-sm text-primary hover:underline hover:text-primary/80 transition-colors"
               >
                 Forgot password?
               </button>
@@ -127,7 +127,7 @@ export default function Auth() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+            className="w-full h-12 font-semibold text-base shadow-lg"
           >
             {loading ? "Please wait..." : isSignUp ? "Sign up" : "Log in"}
           </Button>
@@ -138,7 +138,7 @@ export default function Auth() {
           {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-primary font-semibold hover:underline"
+            className="text-primary font-semibold hover:underline hover:text-primary/80 transition-colors"
           >
             {isSignUp ? "Log in" : "Sign up"}
           </button>

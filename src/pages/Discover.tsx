@@ -98,14 +98,14 @@ export default function Discover() {
       </Helmet>
 
     <div className="min-h-[var(--app-height)] bg-background text-foreground pb-safe-nav">
-      {/* Search Bar - Links to Search Page */}
-      <div className="sticky top-0 z-40 bg-background p-4 border-b border-border">
+      {/* Search Bar - Premium glassmorphic design */}
+      <div className="sticky top-0 z-40 glass-premium p-4 border-b border-border/30">
         <button 
           onClick={() => navigate("/search")}
-          className="w-full relative flex items-center"
+          className="w-full relative flex items-center group"
         >
-          <Search className="absolute left-3 w-5 h-5 text-muted-foreground" />
-          <div className="w-full pl-10 pr-4 py-2.5 bg-secondary border-none rounded-md text-left text-muted-foreground">
+          <Search className="absolute left-3 w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+          <div className="w-full pl-10 pr-4 py-2.5 bg-secondary/50 border border-border/50 rounded-lg text-left text-muted-foreground transition-all duration-200 group-hover:border-primary/30 group-hover:bg-secondary/70 group-hover:shadow-sm">
             Search videos, users, sounds...
           </div>
         </button>
@@ -125,7 +125,7 @@ export default function Discover() {
 
       {/* Explore Videos Grid */}
       <div className="px-4 pb-4">
-        <h2 className="font-bold text-lg mb-3">Explore</h2>
+        <h2 className="font-bold text-lg mb-3 text-display">Explore</h2>
         {isLoading ? (
           <VideoGridSkeleton count={12} />
         ) : (
@@ -133,14 +133,14 @@ export default function Discover() {
           {trendingVideos.map((video) => (
             <div
               key={video.id}
-              className="aspect-[9/16] bg-secondary cursor-pointer overflow-hidden rounded-sm relative group"
+              className="aspect-[9/16] bg-secondary cursor-pointer overflow-hidden rounded-sm relative group grid-item-hover"
               onClick={() => navigate(`/?video=${video.id}`)}
             >
               {video.thumbnail_url ? (
                 <img
                   src={video.thumbnail_url}
                   alt={video.caption || "Video"}
-                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
                 />
               ) : (
@@ -150,7 +150,7 @@ export default function Discover() {
                   muted
                 />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
               <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-lg">
                 <Eye className="w-3 h-3" />
                 <span>{formatCount(video.views_count)}</span>

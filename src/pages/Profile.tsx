@@ -301,45 +301,53 @@ export default function Profile() {
           )}
         </header>
 
-      {/* Profile Info */}
+      {/* Profile Info - Premium Design */}
       <div className="flex flex-col items-center px-4 pb-4">
-        <Avatar className="w-24 h-24 border-2 border-foreground">
-          <AvatarImage src={profile.avatar_url || undefined} />
-          <AvatarFallback className="bg-secondary text-foreground text-2xl">
-            {(profile.display_name || profile.username || "U")[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="w-24 h-24 ring-4 ring-primary/20 shadow-xl animate-glow-pulse">
+            <AvatarImage src={profile.avatar_url || undefined} />
+            <AvatarFallback className="bg-gradient-to-br from-primary/30 to-primary/10 text-foreground text-2xl">
+              {(profile.display_name || profile.username || "U")[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          {isVerified && (
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full border-3 border-background flex items-center justify-center shadow-lg glow-primary-sm">
+              <VerifiedBadge size="sm" className="text-primary-foreground" />
+            </div>
+          )}
+        </div>
 
-        <h2 className="mt-3 font-bold text-lg flex items-center gap-1.5">
+        <h2 className="mt-3 font-bold text-xl flex items-center gap-1.5 text-display">
           {profile.display_name || profile.username}
-          {isVerified && <VerifiedBadge size="md" />}
         </h2>
 
-        {/* Stats */}
-        <div className="flex items-center gap-8 mt-4">
+        {/* Stats - Premium Design */}
+        <div className="flex items-center gap-6 mt-4 px-4 py-3 glass-card rounded-xl">
           <button
             onClick={() => canViewFollowingList() && navigate(`/follow-list/${userId}?tab=following`)}
-            className={`text-center transition-opacity ${canViewFollowingList() ? 'hover:opacity-70' : 'cursor-default'}`}
+            className={`text-center transition-all duration-200 px-2 ${canViewFollowingList() ? 'hover:scale-105' : 'cursor-default'}`}
           >
             <p className="font-bold text-lg">{formatCount(profile.following_count)}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-center">
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-center uppercase tracking-wide">
               Following
               {!canViewFollowingList() && <Lock className="w-3 h-3" />}
             </p>
           </button>
+          <div className="w-px h-8 bg-border/50" />
           <button
             onClick={() => canViewFollowersList() && navigate(`/follow-list/${userId}?tab=followers`)}
-            className={`text-center transition-opacity ${canViewFollowersList() ? 'hover:opacity-70' : 'cursor-default'}`}
+            className={`text-center transition-all duration-200 px-2 ${canViewFollowersList() ? 'hover:scale-105' : 'cursor-default'}`}
           >
             <p className="font-bold text-lg">{formatCount(profile.followers_count)}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-center">
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-center uppercase tracking-wide">
               Followers
               {!canViewFollowersList() && <Lock className="w-3 h-3" />}
             </p>
           </button>
-          <div className="text-center">
+          <div className="w-px h-8 bg-border/50" />
+          <div className="text-center px-2">
             <p className="font-bold text-lg">{formatCount(profile.likes_count)}</p>
-            <p className="text-xs text-muted-foreground">Likes</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Likes</p>
           </div>
         </div>
 
