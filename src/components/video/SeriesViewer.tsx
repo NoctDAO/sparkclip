@@ -46,7 +46,7 @@ export function SeriesViewer({ series, currentVideoId, open, onOpenChange }: Ser
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[40vh] rounded-t-2xl">
+      <SheetContent side="bottom" className="h-[45vh] rounded-t-2xl">
         <SheetHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -71,21 +71,25 @@ export function SeriesViewer({ series, currentVideoId, open, onOpenChange }: Ser
         ) : (
           <ScrollArea className="w-full">
             <div className="flex gap-3 pb-4">
-              {videos.map((video, index) => (
+              {videos.map((video) => (
                 <button
                   key={video.id}
                   onClick={() => handleVideoClick(video)}
-                  className={cn(
-                    "flex-shrink-0 w-28 relative group",
-                    video.id === currentVideoId && "ring-2 ring-primary rounded-lg"
-                  )}
+                  className="flex-shrink-0 w-24 group"
                 >
-                  <div className="aspect-[9/16] bg-secondary rounded-lg overflow-hidden relative">
+                  {/* Movie Poster Style Thumbnail */}
+                  <div 
+                    className={cn(
+                      "aspect-[2/3] bg-card rounded-xl overflow-hidden relative shadow-md transition-all",
+                      "group-hover:shadow-lg group-hover:-translate-y-1",
+                      video.id === currentVideoId && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    )}
+                  >
                     {video.thumbnail_url ? (
                       <img 
                         src={video.thumbnail_url} 
-                        alt={`Part ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        alt={`Part ${video.series_order}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <video 
@@ -95,30 +99,37 @@ export function SeriesViewer({ series, currentVideoId, open, onOpenChange }: Ser
                       />
                     )}
                     
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    
                     {/* Part number overlay */}
-                    <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-background/80 rounded text-[10px] font-semibold">
+                    <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-background/90 backdrop-blur-sm rounded-full text-[9px] font-bold">
                       Part {video.series_order}
                     </div>
 
                     {/* Play icon for non-current videos */}
                     {video.id !== currentVideoId && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Play className="w-8 h-8 text-white fill-white" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-lg">
+                          <Play className="w-3.5 h-3.5 text-primary-foreground fill-primary-foreground ml-0.5" />
+                        </div>
                       </div>
                     )}
 
                     {/* Now playing indicator */}
                     {video.id === currentVideoId && (
-                      <div className="absolute bottom-1 left-1 right-1 px-1.5 py-0.5 bg-primary rounded text-[10px] font-semibold text-primary-foreground text-center">
-                        Now Playing
+                      <div className="absolute bottom-1.5 left-1.5 right-1.5 px-1.5 py-0.5 bg-primary rounded-full text-[9px] font-bold text-primary-foreground text-center">
+                        Playing
                       </div>
                     )}
-                  </div>
 
-                  {/* View count */}
-                  <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                    <Eye className="w-3 h-3" />
-                    <span>{formatCount(video.views_count)}</span>
+                    {/* View count at bottom */}
+                    {video.id !== currentVideoId && (
+                      <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 text-white/80 text-[9px]">
+                        <Eye className="w-2.5 h-2.5" />
+                        <span>{formatCount(video.views_count)}</span>
+                      </div>
+                    )}
                   </div>
                 </button>
               ))}

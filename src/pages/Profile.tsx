@@ -21,6 +21,7 @@ import { useWatchHistory } from "@/hooks/useWatchHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { SeriesManager } from "@/components/video/SeriesManager";
 import { CreateSeriesSheet } from "@/components/video/CreateSeriesSheet";
+import { SeriesPosterCard } from "@/components/video/SeriesPosterCard";
 import { Profile as ProfileType, Video, VideoSeries } from "@/types/video";
 import { useToast } from "@/hooks/use-toast";
 
@@ -527,39 +528,15 @@ export default function Profile() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 p-2">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide p-4">
               {userSeries.map((series) => (
-                <div 
-                  key={series.id} 
-                  className="bg-secondary rounded-lg p-4 text-left hover:bg-secondary/80 transition-colors relative"
-                >
-                  <button
-                    className="w-full text-left"
-                    onClick={() => {
-                      // Navigate to series detail page
-                      navigate(`/series/${series.id}`);
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center overflow-hidden">
-                        {series.cover_image_url ? (
-                          <img src={series.cover_image_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Layers className="w-5 h-5 text-primary" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{series.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {series.videos_count} {series.videos_count === 1 ? "part" : "parts"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Eye className="w-3 h-3" />
-                      <span>{formatCount(series.total_views)} views</span>
-                    </div>
-                  </button>
+                <div key={series.id} className="relative flex-shrink-0">
+                  <SeriesPosterCard
+                    series={series}
+                    size="md"
+                    showCreator={false}
+                    onClick={() => navigate(`/series/${series.id}`)}
+                  />
                   {/* Edit button for own profile */}
                   {isOwnProfile && (
                     <button
@@ -567,7 +544,7 @@ export default function Profile() {
                         e.stopPropagation();
                         setManagingSeries(series);
                       }}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 hover:bg-background transition-colors"
+                      className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-background/80 hover:bg-background transition-colors shadow-sm"
                     >
                       <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
