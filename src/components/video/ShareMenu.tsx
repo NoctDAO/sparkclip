@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Share2, Copy, QrCode, ExternalLink } from "lucide-react";
+import { Share2, Copy, QrCode, ExternalLink, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -15,6 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { QRCode } from "@/components/ui/qr-code";
 import { useToast } from "@/hooks/use-toast";
+import { useWatchParty } from "@/hooks/useWatchParty";
+import { useAuth } from "@/hooks/useAuth";
+import { InviteSheet } from "@/components/watchparty/InviteSheet";
 
 interface ShareMenuProps {
   videoId: string;
@@ -22,10 +27,39 @@ interface ShareMenuProps {
 }
 
 export function ShareMenu({ videoId, shareCount }: ShareMenuProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { createParty } = useWatchParty();
+  
   const [showQRDialog, setShowQRDialog] = useState(false);
+  const [showInviteSheet, setShowInviteSheet] = useState(false);
+  const [partyCode, setPartyCode] = useState<string | null>(null);
+  const [creatingParty, setCreatingParty] = useState(false);
 
   const shareUrl = `${window.location.origin}/video/${videoId}`;
+
+  const handleStartParty = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    setCreatingParty(true);
+    const code = await createParty(videoId);
+    setCreatingParty(false);
+
+    if (code) {
+      setPartyCode(code);
+      setShowInviteSheet(true);
+    }
+  };
+
+  const handleGoToParty = () => {
+    if (partyCode) {
+      navigate(`/party/${partyCode}`);
+    }
+  };
 
   const handleCopyLink = async () => {
     try {
@@ -113,6 +147,11 @@ export function ShareMenu({ videoId, shareCount }: ShareMenuProps) {
             <QrCode className="w-4 h-4 mr-2" />
             Show QR code
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleStartParty} disabled={creatingParty}>
+            <Users className="w-4 h-4 mr-2" />
+            {creatingParty ? "Creating..." : "Start Watch Party"}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -141,6 +180,17 @@ export function ShareMenu({ videoId, shareCount }: ShareMenuProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {partyCode && (
+        <InviteSheet
+          open={showInviteSheet}
+          onOpenChange={(open) => {
+            setShowInviteSheet(open);
+            if (!open) handleGoToParty();
+          }}
+          partyCode={partyCode}
+        />
+      )}
     </>
   );
 }
