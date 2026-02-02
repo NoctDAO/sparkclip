@@ -26,16 +26,20 @@ const formatCount = (count: number) => {
 // Individual series poster item for search results
 function SeriesResultItem({ series }: { series: SeriesWithCreator }) {
   const navigate = useNavigate();
-  const [coverUrl, setCoverUrl] = useState<string | null>(series.cover_image_url);
+  const [coverUrl, setCoverUrl] = useState<string | null>(series.cover_image_url || null);
+  const [loading, setLoading] = useState(!series.cover_image_url);
 
   useEffect(() => {
     async function fetchCover() {
       if (series.cover_image_url) {
         setCoverUrl(series.cover_image_url);
+        setLoading(false);
         return;
       }
 
-      // Try to get first video thumbnail
+      setLoading(true);
+
+      // Fallback: get first video (part 1) thumbnail
       const { data } = await supabase
         .from("videos")
         .select("thumbnail_url")
@@ -47,6 +51,7 @@ function SeriesResultItem({ series }: { series: SeriesWithCreator }) {
       if (data?.thumbnail_url) {
         setCoverUrl(data.thumbnail_url);
       }
+      setLoading(false);
     }
 
     fetchCover();

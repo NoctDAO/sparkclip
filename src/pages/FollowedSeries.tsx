@@ -30,16 +30,20 @@ function FollowedSeriesCard({
   onUnfollow: (id: string) => void;
 }) {
   const navigate = useNavigate();
-  const [coverUrl, setCoverUrl] = useState<string | null>(item.cover_image_url);
+  const [coverUrl, setCoverUrl] = useState<string | null>(item.cover_image_url || null);
+  const [loading, setLoading] = useState(!item.cover_image_url);
 
   useEffect(() => {
     async function fetchCover() {
       if (item.cover_image_url) {
         setCoverUrl(item.cover_image_url);
+        setLoading(false);
         return;
       }
 
-      // Try to get first video thumbnail
+      setLoading(true);
+
+      // Fallback: get first video (part 1) thumbnail
       const { data } = await supabase
         .from("videos")
         .select("thumbnail_url")
@@ -51,6 +55,7 @@ function FollowedSeriesCard({
       if (data?.thumbnail_url) {
         setCoverUrl(data.thumbnail_url);
       }
+      setLoading(false);
     }
 
     fetchCover();
