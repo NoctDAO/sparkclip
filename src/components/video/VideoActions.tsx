@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Share2, Bookmark, Eye, Flag, Layers } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Eye, Flag, Layers, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useRateLimit } from "@/hooks/useRateLimit";
+import { useContentPreferences } from "@/hooks/useContentPreferences";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ReportDialog } from "@/components/ReportDialog";
 import { AddToSeriesSheet } from "@/components/video/AddToSeriesSheet";
 import { DuetButton } from "@/components/video/DuetButton";
+import { ShareMenu } from "@/components/video/ShareMenu";
 
 interface VideoActionsProps {
   videoId: string;
@@ -39,11 +41,13 @@ export function VideoActions({
   const { user } = useAuth();
   const { toast } = useToast();
   const { checkRateLimit: checkLikeLimit, handleRateLimitError } = useRateLimit("like");
+  const { markNotInterested } = useContentPreferences();
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(isBookmarked);
   const [likesCount, setLikesCount] = useState(initialLikes);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showSeriesSheet, setShowSeriesSheet] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
 
   const isOwnVideo = user?.id === videoUserId;
 
@@ -125,16 +129,26 @@ export function VideoActions({
     }
   };
 
-  const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/video/${videoId}`;
-    try {
-      await navigator.share({
-        title: "Check out this video!",
-        url: shareUrl,
+  const handleNotInterested = async () => {
+    if (!user) {
+      toast({ title: "Please sign in", variant: "destructive" });
+      return;
+    }
+
+    const success = await markNotInterested("not_interested_video", videoId);
+    if (success) {
+      setIsHidden(true);
+      toast({
+        title: "Got it! We'll show you less like this",
+        action: (
+          <button
+            onClick={() => setIsHidden(false)}
+            className="text-primary hover:underline text-sm font-medium"
+          >
+            Undo
+          </button>
+        ),
       });
-    } catch {
-      await navigator.clipboard.writeText(shareUrl);
-      toast({ title: "Link copied to clipboard" });
     }
   };
 
@@ -215,18 +229,8 @@ export function VideoActions({
         )}>Save</span>
       </button>
 
-      {/* Share */}
-      <button
-        onClick={handleShare}
-        className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
-      >
-        <div className="p-2 rounded-full backdrop-blur-sm bg-background/20 hover:bg-background/30 transition-colors duration-150">
-          <Share2 className="w-6 h-6 text-foreground drop-shadow-md" />
-        </div>
-        <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">
-          {formatCount(initialShares)}
-        </span>
-      </button>
+      {/* Share with QR Code option */}
+      <ShareMenu videoId={videoId} shareCount={initialShares} />
 
       {/* Duet - for other users' videos that allow duets */}
       {!isOwnVideo && (
@@ -257,6 +261,18 @@ export function VideoActions({
         <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Report</span>
       </button>
 
+      {/* Not Interested - only show for other people's videos */}
+      {!isOwnVideo && (
+        <button
+          onClick={handleNotInterested}
+          className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform duration-100"
+        >
+          <div className="p-2 rounded-full backdrop-blur-sm bg-background/20 hover:bg-background/30 transition-colors duration-150">
+            <EyeOff className="w-6 h-6 text-foreground drop-shadow-md" />
+          </div>
+          <span className="text-[11px] font-medium text-foreground/90 drop-shadow-sm">Hide</span>
+        </button>
+      )}
       <ReportDialog
         open={showReportDialog}
         onOpenChange={setShowReportDialog}

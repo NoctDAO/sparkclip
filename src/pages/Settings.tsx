@@ -17,6 +17,8 @@ import {
   CheckCircle,
   Megaphone,
   DollarSign,
+  Clock,
+  EyeOff,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +32,8 @@ import { SeriesAutoPlayToggle } from "@/components/settings/SeriesAutoPlayToggle
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useWatchHistory } from "@/hooks/useWatchHistory";
+import { useContentPreferences } from "@/hooks/useContentPreferences";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -54,6 +58,8 @@ export default function Settings() {
   const navigate = useNavigate();
   const { user, session, signOut } = useAuth();
   const { isAdmin, isModerator, isVerified, isAdvertiser } = useUserRoles(user?.id);
+  const { clearHistory } = useWatchHistory();
+  const { clearAllPreferences } = useContentPreferences();
   const { toast } = useToast();
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -61,6 +67,8 @@ export default function Settings() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isClearingHistory, setIsClearingHistory] = useState(false);
+  const [isClearingPrefs, setIsClearingPrefs] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -135,6 +143,28 @@ export default function Settings() {
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
+    }
+  };
+
+  const handleClearWatchHistory = async () => {
+    setIsClearingHistory(true);
+    const success = await clearHistory();
+    setIsClearingHistory(false);
+    if (success) {
+      toast({ title: "Watch history cleared" });
+    } else {
+      toast({ title: "Failed to clear history", variant: "destructive" });
+    }
+  };
+
+  const handleClearPreferences = async () => {
+    setIsClearingPrefs(true);
+    const success = await clearAllPreferences();
+    setIsClearingPrefs(false);
+    if (success) {
+      toast({ title: "Content preferences reset" });
+    } else {
+      toast({ title: "Failed to reset preferences", variant: "destructive" });
     }
   };
 
@@ -301,6 +331,25 @@ export default function Settings() {
             label="Push notifications"
             description="Manage notification preferences"
             onClick={() => toast({ title: "Coming soon" })}
+          />
+        </div>
+
+        {/* Privacy & Data Section */}
+        <div className="mb-6">
+          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Privacy & Data
+          </h2>
+          <SettingsItem
+            icon={Clock}
+            label="Clear watch history"
+            description={isClearingHistory ? "Clearing..." : "Remove all watched videos from history"}
+            onClick={handleClearWatchHistory}
+          />
+          <SettingsItem
+            icon={EyeOff}
+            label="Reset content preferences"
+            description={isClearingPrefs ? "Resetting..." : "Clear 'not interested' data"}
+            onClick={handleClearPreferences}
           />
         </div>
 
