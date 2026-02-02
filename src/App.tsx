@@ -29,6 +29,7 @@ import Sounds from "./pages/Sounds";
 import SoundDetail from "./pages/SoundDetail";
 import FollowedSeries from "./pages/FollowedSeries";
 import VideoPage from "./pages/VideoPage";
+import WatchParty from "./pages/WatchParty";
 import SeriesDetail from "./pages/SeriesDetail";
 import Analytics from "./pages/Analytics";
 import Moderation from "./pages/Moderation";
@@ -87,6 +88,7 @@ const App = () => {
                       <Route path="/advertiser/analytics" element={<AdAnalytics />} />
                       <Route path="/earnings" element={<CreatorEarnings />} />
                       <Route path="/duet/:videoId" element={<DuetRecording />} />
+                      <Route path="/party/:partyCode" element={<WatchParty />} />
                       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                       <Route path="*" element={<NotFound />} />
                     </Routes>
