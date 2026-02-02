@@ -179,32 +179,37 @@ export default function Settings() {
       </header>
 
       <div className="py-4">
-        {/* User Info Card */}
+        {/* User Info Card - Premium Design */}
         {user && (
-          <div className="mx-4 mb-6 p-4 bg-secondary/30 rounded-xl">
+          <div className="mx-4 mb-6 p-4 glass-card rounded-xl border-luminous">
             <div className="flex items-center gap-4">
-              <Avatar className="w-16 h-16">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-lg bg-primary/10">
-                  {(profile?.display_name || profile?.username || user.email || "U")[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="w-16 h-16 ring-2 ring-primary/30 shadow-lg">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-lg bg-gradient-to-br from-primary/20 to-primary/5">
+                    {(profile?.display_name || profile?.username || user.email || "U")[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-success rounded-full border-2 border-background flex items-center justify-center">
+                  <CheckCircle className="w-3 h-3 text-success-foreground" />
+                </div>
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="font-semibold text-lg truncate">
+                  <h2 className="font-semibold text-lg truncate text-display">
                     {profile?.display_name || profile?.username || "User"}
                   </h2>
                   {isVerified && (
-                    <Badge variant="secondary" className="shrink-0">
+                    <Badge variant="secondary" className="shrink-0 bg-primary/10 text-primary border-primary/20">
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Verified
                     </Badge>
                   )}
                   {isAdmin && (
-                    <Badge className="shrink-0">Admin</Badge>
+                    <Badge className="shrink-0 glow-primary-sm">Admin</Badge>
                   )}
                   {isModerator && !isAdmin && (
-                    <Badge variant="outline" className="shrink-0">Mod</Badge>
+                    <Badge variant="outline" className="shrink-0 border-primary/30">Mod</Badge>
                   )}
                 </div>
                 {profile?.username && (
@@ -213,19 +218,23 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-2 pt-3 border-t border-border/50">
               <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                </div>
                 <span className="truncate">{user.email}</span>
                 {user.email_confirmed_at && (
-                  <Badge variant="outline" className="text-xs shrink-0">
-                    <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
+                  <Badge variant="outline" className="text-xs shrink-0 border-success/30 text-success">
+                    <CheckCircle className="w-3 h-3 mr-1" />
                     Verified
                   </Badge>
                 )}
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Calendar className="w-4 h-4 shrink-0" />
+                <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
+                  <Calendar className="w-4 h-4" />
+                </div>
                 <span>
                   Joined {user.created_at ? format(new Date(user.created_at), "MMMM d, yyyy") : "Unknown"}
                 </span>
@@ -236,7 +245,7 @@ export default function Settings() {
 
         {/* Account Section */}
         <div className="mb-6">
-          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h2 className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
             Account
           </h2>
           <SettingsItem
@@ -303,7 +312,7 @@ export default function Settings() {
 
         {/* Display Section */}
         <div className="mb-6">
-          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h2 className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
             Display
           </h2>
           <ThemeToggle />
@@ -314,7 +323,7 @@ export default function Settings() {
 
         {/* Playback Section */}
         <div className="mb-6">
-          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h2 className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
             Playback
           </h2>
           <SoundPreferenceToggle />
@@ -323,7 +332,7 @@ export default function Settings() {
 
         {/* Notifications Section */}
         <div className="mb-6">
-          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h2 className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
             Notifications
           </h2>
           <SettingsItem
@@ -336,7 +345,7 @@ export default function Settings() {
 
         {/* Privacy & Data Section */}
         <div className="mb-6">
-          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h2 className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
             Privacy & Data
           </h2>
           <SettingsItem
@@ -355,7 +364,7 @@ export default function Settings() {
 
         {/* About Section */}
         <div className="mb-6">
-          <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h2 className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
             About
           </h2>
           <SettingsItem

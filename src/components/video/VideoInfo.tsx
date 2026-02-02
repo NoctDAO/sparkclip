@@ -87,7 +87,7 @@ export function VideoInfo({
       {/* User info */}
       <div className="flex items-center gap-2">
         <Link to={`/profile/${userId}`}>
-          <Avatar className="w-9 h-9 border border-foreground/50">
+          <Avatar className="w-9 h-9 border-2 border-foreground/30 shadow-lg ring-2 ring-primary/20">
             <AvatarImage src={avatarUrl || undefined} />
             <AvatarFallback className="bg-secondary text-foreground text-sm">
               {(displayName || username || "U")[0].toUpperCase()}
@@ -95,7 +95,11 @@ export function VideoInfo({
           </Avatar>
         </Link>
         
-        <Link to={`/profile/${userId}`} className="font-semibold text-sm text-foreground hover:underline drop-shadow-sm">
+        <Link 
+          to={`/profile/${userId}`} 
+          className="font-semibold text-sm text-foreground hover:underline"
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}
+        >
           @{username || "user"}
         </Link>
         
@@ -114,7 +118,10 @@ export function VideoInfo({
 
       {/* Caption & Hashtags inline */}
       {(caption || (hashtags && hashtags.length > 0)) && (
-        <p className="text-[13px] text-foreground leading-snug drop-shadow-sm">
+        <p 
+          className="text-[13px] text-foreground leading-snug"
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}
+        >
           {caption && <span>{caption} </span>}
           {hashtags && hashtags.map((tag, index) => (
             <Link
@@ -128,23 +135,34 @@ export function VideoInfo({
         </p>
       )}
 
-      {/* Sound info - ensure it doesn't overflow */}
+      {/* Sound info - with premium animation */}
       {sound ? (
         <Link 
           to={`/sounds/${sound.id}`}
           className="flex items-center gap-1.5 group overflow-hidden"
         >
-          <div className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center animate-spin" style={{ animationDuration: "3s" }}>
-            <Music className="w-3.5 h-3.5 text-foreground/80" />
+          <div 
+            className="w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-foreground/10 animate-spin" 
+            style={{ animationDuration: "3s" }}
+          >
+            <Music className="w-3 h-3 text-foreground/90" />
           </div>
-          <span className="text-xs text-foreground/80 truncate group-hover:underline">
+          <span 
+            className="text-xs text-foreground/90 truncate group-hover:underline"
+            style={{ textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}
+          >
             {sound.title} - {sound.artist || "Unknown"}
           </span>
         </Link>
       ) : (
         <div className="flex items-center gap-1.5 overflow-hidden">
-          <Music className="w-3.5 h-3.5 flex-shrink-0 text-foreground/80" />
-          <span className="text-xs text-foreground/80 truncate">
+          <div className="w-4 h-4 flex-shrink-0 flex items-center justify-center rounded-full bg-foreground/10">
+            <Music className="w-3 h-3 text-foreground/90" />
+          </div>
+          <span 
+            className="text-xs text-foreground/90 truncate"
+            style={{ textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}
+          >
             Original sound - {displayName || username || "user"}
           </span>
         </div>
